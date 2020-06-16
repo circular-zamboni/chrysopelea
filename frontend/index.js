@@ -1,7 +1,18 @@
-import {initializeBlock} from '@airtable/blocks/ui';
-import React, {useEffect} from 'react';
+import {
+  initializeBlock,
+  useBase,
+  useGlobalConfig,
+  useRecords,
+  useSettingsButton,
+  Box,
+  FieldPickerSynced,
+  FormField,
+  TablePickerSynced,
+  ViewPickerSynced
+} from '@airtable/blocks/ui';
+import React, {useEffect, useState} from 'react';
 
-async function initializePython(onStatusChanged, onInitializeComplete) {
+function initializePython(onStatusChanged, onInitializeComplete) {
   try {
     console.log('Loading language.');
     onStatusChanged('Loading language.');
@@ -38,21 +49,170 @@ async function initializePython(onStatusChanged, onInitializeComplete) {
   }
 }
 
-function Chrysopelea() {
+function ChrysopeleaBlock() {
 
-    useEffect( () => {
-      initializePython(
-        (status) => { let v = 1;                     },
-        () =>       { let v = 1; }
-      );
-    });
-    // YOUR CODE GOES HERE
-    return <div>
-      Hello worldzz 🚀
-      </div>;
+  const [isShowingSettings, setIsShowingSettings] = useState(false);
+
+  useEffect( () => {
+    initializePython(
+      (status) => { let v = 1; },
+      () =>       { let v = 1; }
+    );
+  });
+
+  useSettingsButton(function() {
+    setIsShowingSettings(!isShowingSettings);
+  });
+
+  if (isShowingSettings) {
+    return <SettingsComponent />
+  }
+
+  return <Chrysopelea />
 }
 
-initializeBlock(() => <Chrysopelea />);
+function SettingsComponent() {
+  const base = useBase();
+  const globalConfig = useGlobalConfig();
+
+  const scriptVariableNamesTableId
+    = globalConfig.get("scriptVariableNamesTableId");
+
+  const scriptVariableNamesViewId
+    = globalConfig.get("scriptVariableNamesViewId");
+
+  const scriptVariableNamesFieldId
+    = globalConfig.get("scriptVariableNamesFieldId");
+
+  const scriptVariableNamesTable
+    = base.getTableByIdIfExists(scriptVariableNamesTableId);
+
+  const scriptVariableNamesView
+    = scriptVariableNamesTable
+      ? scriptVariableNamesTable.getViewByIdIfExists(scriptVariableNamesViewId)
+      : null;
+
+  const scriptVariableNamesField
+    = scriptVariableNamesTable
+      ? scriptVariableNamesTable.getFieldByIdIfExists(scriptVariableNamesFieldId)
+      : null;
+
+  const scriptVariableRecords = useRecords(scriptVariableNamesView);
+
+  return (
+    <Box
+    display="flex"
+    flexDirection="column"
+    padding={2}
+    border="none"
+    >
+    <FormField
+      label="Configure Script Variable Names"
+    >
+      <Box
+        display="flex"
+        flexDirection="column"
+        padding={2}
+        border="thick"
+        backgroundColor="lightGray1"
+      >
+        <FormField
+          label="Script Variable Names List Table"
+          description="The table that contains your list of script variable names."
+        >
+          <TablePickerSynced globalConfigKey="scriptVariableNamesTableId" />
+        </FormField>
+        { scriptVariableNamesTable && (
+        <FormField
+          label="Script Variable Names List View"
+          description="The view that contains your list of script variable names."
+        >
+          <ViewPickerSynced
+            table={scriptVariableNamesTable}
+            globalConfigKey="scriptVariableNamesViewId" />
+        </FormField>
+        )}
+        { scriptVariableNamesTable && (
+        <FormField
+          label="Script Variable Names List Field"
+          description="The field that defines your script variable names."
+        >
+          <FieldPickerSynced
+            table={scriptVariableNamesTable}
+            globalConfigKey="scriptVariableNamesFieldId" />
+        </FormField>
+        )}
+      </Box>
+    </FormField>
+
+    {scriptVariableRecords && scriptVariableNamesField && (
+      <FormField
+        label="Configure Script Variable Data"
+      >
+        <Box
+          display="flex"
+          flexDirection="column"
+          padding={2}
+          border="thick"
+          backgroundColor="lightGray1"
+        >
+          {scriptVariableRecords.map(scriptVariableRecord => {
+            return <ConfigureScriptVariable
+              scriptVariableRecord={scriptVariableRecord}
+              scriptVariableNamesField={scriptVariableNamesField}
+            />;
+          })}
+        </Box>
+      </FormField>
+    )}
+    </Box>
+  );
+}
+
+function ConfigureScriptVariable({scriptVariableRecord, scriptVariableNamesField}) {
+    const scriptVariableName
+      = scriptVariableRecord.getCellValueAsString(scriptVariableNamesField);
+    // TODO: below, ... ->  { scriptVariableName && ( ... ) }  ?
+    return (
+      <FormField
+        label={`Script Variable: ${scriptVariableName}`}
+      >
+        <Box
+          display="flex"
+          flexDirection="row"
+          padding={2}
+          border="thick"
+        >
+          <FormField
+            label="Data Table"
+          >
+            <TablePickerSynced
+              globalConfigKey={["selectedDataTableId", scriptVariableName]}
+            />
+          </FormField>
+          <FormField
+            label="Data View"
+          >
+            {/* TODO: 
+            <ViewPickerSynced
+              table={}
+              globalConfigKey={["selectedDataViewId", scriptVariableName]}
+            />
+            */
+            }
+          </FormField>
+        </Box>
+      </FormField>
+    )
+}
+
+function Chrysopelea() {
+  return <div>
+    Hello worldzz 🚀
+  </div>;
+}
+
+initializeBlock(() => <ChrysopeleaBlock />);
 
 // --------------------------------------------------------------------------
 // TODO: move this out to another file and make it an import.
