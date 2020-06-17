@@ -120,7 +120,8 @@ function SettingsComponent() {
           label="Script Variable Names List Table"
           description="The table that contains your list of script variable names."
         >
-          <TablePickerSynced globalConfigKey="scriptVariableNamesTableId" />
+          <TablePickerSynced
+            globalConfigKey="scriptVariableNamesTableId" />
         </FormField>
         { scriptVariableNamesTable && (
         <FormField
@@ -156,7 +157,10 @@ function SettingsComponent() {
           border="thick"
           backgroundColor="lightGray1"
         >
-          {scriptVariableRecords.map(scriptVariableRecord => {
+          {scriptVariableRecords
+            .filter(scriptVariableRecord =>
+              scriptVariableRecord.getCellValueAsString(scriptVariableNamesField) != '')
+            .map(scriptVariableRecord => {
             return <ConfigureScriptVariable
               scriptVariableRecord={scriptVariableRecord}
               scriptVariableNamesField={scriptVariableNamesField}
@@ -169,41 +173,50 @@ function SettingsComponent() {
   );
 }
 
-function ConfigureScriptVariable({scriptVariableRecord, scriptVariableNamesField}) {
-    const scriptVariableName
-      = scriptVariableRecord.getCellValueAsString(scriptVariableNamesField);
-    // TODO: below, ... ->  { scriptVariableName && ( ... ) }  ?
-    return (
-      <FormField
-        label={`Script Variable: ${scriptVariableName}`}
+function ConfigureScriptVariable({scriptVariableRecord,
+                                  scriptVariableNamesField}) {
+  const base = useBase();
+  const globalConfig = useGlobalConfig();
+
+  const scriptVariableName
+    = scriptVariableRecord.getCellValueAsString(scriptVariableNamesField);
+
+  const scriptVariableDataTableId
+    = globalConfig.get(["scriptVariableDataTableId", scriptVariableName]);
+
+  const scriptVariableDataTable
+    = base.getTableByIdIfExists(scriptVariableDataTableId);
+
+  return (
+    <FormField
+      label={`Script Variable: ${scriptVariableName}`}
+    >
+      <Box
+        display="flex"
+        flexDirection="row"
+        padding={2}
+        border="thick"
       >
-        <Box
-          display="flex"
-          flexDirection="row"
-          padding={2}
-          border="thick"
+        <FormField
+          label="Data Table"
         >
-          <FormField
-            label="Data Table"
-          >
-            <TablePickerSynced
-              globalConfigKey={["selectedDataTableId", scriptVariableName]}
-            />
-          </FormField>
+          <TablePickerSynced
+            globalConfigKey={["scriptVariableDataTableId", scriptVariableName]}
+          />
+        </FormField>
+        { scriptVariableDataTable && (
           <FormField
             label="Data View"
           >
-            {/* TODO: 
             <ViewPickerSynced
-              table={}
+              table={scriptVariableDataTable}
               globalConfigKey={["selectedDataViewId", scriptVariableName]}
             />
-            */
-            }
           </FormField>
-        </Box>
-      </FormField>
-    )
+        )}
+      </Box>
+    </FormField>
+  )
 }
 
 function Chrysopelea() {
