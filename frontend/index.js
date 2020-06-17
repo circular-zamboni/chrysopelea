@@ -84,6 +84,9 @@ function SettingsComponent() {
   const scriptVariableNamesFieldId
     = globalConfig.get("scriptVariableNamesFieldId");
 
+  const scriptSourceCodeTableId
+    = globalConfig.get("scriptSourceCodeTableId");
+
   const scriptVariableNamesTable
     = base.getTableByIdIfExists(scriptVariableNamesTableId);
 
@@ -96,6 +99,9 @@ function SettingsComponent() {
     = scriptVariableNamesTable
       ? scriptVariableNamesTable.getFieldByIdIfExists(scriptVariableNamesFieldId)
       : null;
+
+  const scriptSourceCodeTable
+    = base.getTableByIdIfExists(scriptSourceCodeTableId);
 
   const scriptVariableRecords = useRecords(scriptVariableNamesView);
 
@@ -169,6 +175,35 @@ function SettingsComponent() {
         </Box>
       </FormField>
     )}
+
+    <FormField
+      label="Configure Script Storage"
+    >
+      <Box
+        display="flex"
+        flexDirection="row"
+        padding={2}
+        border="thick"
+      >
+        <FormField
+          label="Script Source Code Table"
+        >
+          <TablePickerSynced
+            globalConfigKey="scriptSourceCodeTableId"
+          />
+        </FormField>
+        { scriptSourceCodeTable && (
+          <FormField
+            label="Script Source Code Field"
+          >
+            <FieldPickerSynced
+              table={scriptSourceCodeTable}
+              globalConfigKey="scriptSourceCodeFieldId"
+            />
+          </FormField>
+        )}
+      </Box>
+    </FormField>
     </Box>
   );
 }
