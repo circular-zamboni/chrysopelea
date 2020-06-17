@@ -257,6 +257,7 @@ function ConfigureScriptVariable({scriptVariableRecord,
 }
 
 function Chrysopelea() {
+  const [isShowScriptEnabled, setShowScriptEnabled] = useState(true);
   const [isShowDataInputsSummaryEnabled, setShowDataInputsSummaryEnabled] = useState(true);
   const [isShowDataOutputsSummaryEnabled, setShowDataOutputsSummaryEnabled] = useState(true);
   const [isShowScriptResultsEnabled, setShowScriptResultsEnabled] = useState(true);
@@ -273,8 +274,13 @@ function Chrysopelea() {
       display="flex"
       flexDirection="row"
       padding={2}
-      border="thin"
+      border="default"
     >
+      <Switch
+        label="Show Script"
+        value={isShowScriptEnabled}
+        onChange={newValue => setShowScriptEnabled(newValue)}
+      />
       <Switch
         label="Show Data Inputs Summary"
         value={isShowDataInputsSummaryEnabled}
@@ -297,20 +303,62 @@ function Chrysopelea() {
       />
       <Switch
         label="Run Automatically When Inputs Are Updated"
-        value={isRunAutomaticallyWhenInputsUpdated}        
+        value={isRunAutomaticallyWhenInputsUpdated}
         onChange={newValue => setRunAutomaticallyWhenInputsUpdated(newValue)}
       />
       <div>choose script, new script, save script, run script, help</div>
     </Box>
+
     <Box
-      display="flex"
+      display={isShowScriptEnabled ? "flex" : "none"}
       flexDirection="column"
       padding={2}
-      border="thin"
+      border="default"
     >
       <Heading>Script</Heading>
-      <Heading>script_component_here</Heading>
+      <div>more here</div>
     </Box>
+
+    <Box
+      display={isShowDataInputsSummaryEnabled ? "flex" : "none"}
+      flexDirection="column"
+      padding={2}
+      border="default"
+    >
+      <Heading>Data Inputs Summary</Heading>
+      <div>more here</div>
+    </Box>
+
+    <Box
+      display={isShowDataOutputsSummaryEnabled ? "flex" : "none"}
+      flexDirection="column"
+      padding={2}
+      border="default"
+    >
+      <Heading>Data Outputs Summary</Heading>
+      <div>more here</div>
+    </Box>
+
+    <Box
+      display={isShowScriptResultsEnabled ? "flex" : "none"}
+      flexDirection="column"
+      padding={2}
+      border="default"
+    >
+      <Heading>Script Results</Heading>
+      <div>more here</div>
+    </Box>
+
+    <Box
+      display={isShowPlotsEnabled ? "flex" : "none"}
+      flexDirection="column"
+      padding={2}
+      border="default"
+    >
+      <Heading>Plots</Heading>
+      <div>more here</div>
+    </Box>
+
   </Box>
   );
 
