@@ -7,7 +7,9 @@ import {
   Box,
   FieldPickerSynced,
   FormField,
+  Heading,
   TablePickerSynced,
+  Switch,
   ViewPickerSynced
 } from '@airtable/blocks/ui';
 import React, {useEffect, useState} from 'react';
@@ -255,9 +257,77 @@ function ConfigureScriptVariable({scriptVariableRecord,
 }
 
 function Chrysopelea() {
-  return <div>
-    Hello worldzz 🚀
-  </div>;
+  const [isShowDataInputsSummaryEnabled, setShowDataInputsSummaryEnabled] = useState(true);
+  const [isShowDataOutputsSummaryEnabled, setShowDataOutputsSummaryEnabled] = useState(true);
+  const [isShowScriptResultsEnabled, setShowScriptResultsEnabled] = useState(true);
+  const [isShowPlotsEnabled, setShowPlotsEnabled] = useState(true);
+  const [isRunAutomaticallyWhenInputsUpdated, setRunAutomaticallyWhenInputsUpdated] = useState(false);
+  return (
+  <Box
+    display="flex"
+    flexDirection="column"
+    padding={2}
+    border="thick"
+  >
+    <Box
+      display="flex"
+      flexDirection="row"
+      padding={2}
+      border="thin"
+    >
+      <Switch
+        label="Show Data Inputs Summary"
+        value={isShowDataInputsSummaryEnabled}
+        onChange={newValue => setShowDataInputsSummaryEnabled(newValue)}
+      />
+      <Switch
+        label="Show Data Outputs Summary"
+        value={isShowDataOutputsSummaryEnabled}
+        onChange={newValue => setShowDataOutputsSummaryEnabled(newValue)}
+      />
+      <Switch
+        label="Show Script Results"
+        value={isShowScriptResultsEnabled}
+        onChange={newValue => setShowScriptResultsEnabled(newValue)}
+      />
+      <Switch
+        label="Show Plots"
+        value={isShowPlotsEnabled}
+        onChange={newValue => setShowPlotsEnabled(newValue)}
+      />
+      <Switch
+        label="Run Automatically When Inputs Are Updated"
+        value={isRunAutomaticallyWhenInputsUpdated}        
+        onChange={newValue => setRunAutomaticallyWhenInputsUpdated(newValue)}
+      />
+      <div>choose script, new script, save script, run script, help</div>
+    </Box>
+    <Box
+      display="flex"
+      flexDirection="column"
+      padding={2}
+      border="thin"
+    >
+      <Heading>Script</Heading>
+      <Heading>script_component_here</Heading>
+    </Box>
+  </Box>
+  );
+
+  /*
+    - Script area
+    - Data Inputs Summary
+    - Data Outputs Summary
+    - Results
+    - Plots
+    - Choose Script
+    - New Script
+    - Save Script
+    - Run Script
+    - Option for run when data is changed
+    - Help
+
+  */
 }
 
 initializeBlock(() => <ChrysopeleaBlock />);
