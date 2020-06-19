@@ -802,8 +802,9 @@ function Chrysopelea() {
           <Dialog.CloseButton />
           <Heading>No Rows In Script Source Table</Heading>
           <Text variant="paragraph">
-            Your selected script source code table doesn't have any rows in it.
+            Your script source code table '{scriptSourceCodeTable.name}' doesn't have any rows in it.
             Add at least one row with a script to get started.
+            Go to the block settings if you need to point to a different table for your script source code.
           </Text>
           <Button onClick={() => setThereAreNoScriptsDialogOpen(false)}>Close</Button>
         </Dialog>
