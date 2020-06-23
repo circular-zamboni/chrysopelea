@@ -463,13 +463,6 @@ function ChrysopeleaBlock() {
 
   const [isShowingSettings, setIsShowingSettings] = useState(false);
 
-  useEffect( () => {
-    initializePython(
-      (status) => { let v = 1; },
-      () =>       { let v = 1; }
-    );
-  });
-
   useSettingsButton(function() {
     setIsShowingSettings(!isShowingSettings);
   });
@@ -664,40 +657,6 @@ function ConfigureScriptVariable({scriptVariableRecord,
   )
 }
 
-function ScriptArea() {
-  const base = useBase();
-  const globalConfig = useGlobalConfig();
-
-  const scriptSourceCodeTableId
-    = globalConfig.get("scriptSourceCodeTableId");
-
-  const scriptSourceCodeFieldId
-    = globalConfig.get("scriptSourceCodeFieldId");
-
-  const scriptSourceCodeTable
-    = base.getTableByIdIfExists(scriptSourceCodeTableId);
-
-  const scriptSourceCodeField
-    = scriptSourceCodeTable
-      ? scriptSourceCodeTable.getFieldByIdIfExists(scriptSourceCodeFieldId)
-      : null;
-
-  const selectedScriptSourceRecordId
-    = globalConfig.get('selectedScriptSourceRecordId');
-
-  return (
-    <CodeMirror
-      value="test code"
-      onBeforeChange={(editor, data, value) => {
-        handleUserCodeEdited(value);
-      }}
-      onChange={(editor, data, value) => {
-      }}
-      options={{lineNumbers: true, mode: "python", theme: "monokai", viewportMargin: Infinity}}
-    />
-  )
-}
-
 function ThereAreNoScriptsDialog() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   return (
@@ -729,21 +688,67 @@ function Chrysopelea() {
   const [isRunAutomaticallyWhenInputsUpdated, setRunAutomaticallyWhenInputsUpdated] = useState(false);
   const [isThereAreNoScriptsDialogOpen, setThereAreNoScriptsDialogOpen] = useState(false);
 
+  const [isUserCodeDirty, setIsUserCodeDirty] = useState(false);
+
   const scriptSourceCodeTableId = globalConfig.get("scriptSourceCodeTableId");
   const scriptSourceCodeFieldId = globalConfig.get("scriptSourceCodeFieldId");
   const scriptSourceCodeTable = base.getTableByIdIfExists(scriptSourceCodeTableId);
-  const scriptSourceCodeRecords = useRecords(scriptSourceCodeTable.selectRecords());
   const scriptSourceCodeField =   scriptSourceCodeTable
                                 ? scriptSourceCodeTable.getFieldByIdIfExists(scriptSourceCodeFieldId)
                                 : null;
+  const scriptSourceCodeQueryResult = scriptSourceCodeTable ? scriptSourceCodeTable.selectRecords() : null;
+  const scriptSourceCodeRecordsForChoosing = useRecords(scriptSourceCodeQueryResult);
+  const selectedScriptSourceRecordId = globalConfig.get("selectedScriptSourceRecordId");
+  const selectedScriptSourceRecord =  (scriptSourceCodeQueryResult && selectedScriptSourceRecordId)
+                                    ? scriptSourceCodeQueryResult.getRecordByIdIfExists(selectedScriptSourceRecordId)
+                                    : null;
+  const selectedScriptSourceValue =   selectedScriptSourceRecord
+                                    ? selectedScriptSourceRecord.getCellValueAsString(scriptSourceCodeField)
+                                    : "Use the 'Select Script' button to select one, or 'New Script' to create a new one.";
+  const selectedScriptSourceName  =   selectedScriptSourceRecord
+                                    ? selectedScriptSourceRecord.primaryCellValueAsString
+                                    : "None loaded";
+
+  const [userCode, setUserCode] = useState(selectedScriptSourceValue !== undefined ? selectedScriptSourceValue : "");
+
+  useEffect( () => {
+      initializePython(
+        (status) => { let v = 1; },
+        () =>       { let v = 1; }
+      );
+      setUserCode(selectedScriptSourceValue);
+    },
+    /* Only run 'effect' once, by passing empty array as 2nd argument */
+    []
+  );
 
   const handleSelectScriptSourceRecord = async () => {
-    if( scriptSourceCodeRecords == null || scriptSourceCodeRecords.length == 0) {
+    if( scriptSourceCodeRecordsForChoosing == null || scriptSourceCodeRecordsForChoosing.length == 0) {
       setThereAreNoScriptsDialogOpen(true);
       return;
     }
-    const selectedScriptSourceRecord = await expandRecordPickerAsync(scriptSourceCodeRecords);
+    const selectedScriptSourceRecord = await expandRecordPickerAsync(scriptSourceCodeRecordsForChoosing);
+    if( selectedScriptSourceRecord !== null ) {
+      globalConfig.setAsync("selectedScriptSourceRecordId", selectedScriptSourceRecord.id)
+      .then(() => {
+        setIsUserCodeDirty(false);
+      });
+    }
   };
+
+  const handleUserCodeEdited = (value) => {
+    setUserCode(value);
+    setIsUserCodeDirty(true);
+  }
+
+  const handleSaveScript = () => {
+    scriptSourceCodeTable.updateRecordsAsync(
+      [{id: selectedScriptSourceRecord.id, fields: {[scriptSourceCodeFieldId]: userCode}}]
+    )
+    .then(() => {
+      setIsUserCodeDirty(false);
+    });
+  }
 
   return (
   <Box
@@ -830,6 +835,7 @@ function Chrysopelea() {
       New Script
       </Button>
       <Button
+        disabled={!isUserCodeDirty}
         onClick={() => handleSaveScript()}
         size="small"
         icon="up"
@@ -849,7 +855,7 @@ function Chrysopelea() {
         label="Run Automatically When Inputs Are Updated"
         value={isRunAutomaticallyWhenInputsUpdated}
         onChange={newValue => setRunAutomaticallyWhenInputsUpdated(newValue)}
-      />      
+      />
       <Button
         onClick={() => handleHelp()}
         size="small"
@@ -866,7 +872,15 @@ function Chrysopelea() {
       border="default"
     >
       <Heading>Script</Heading>
-      <ScriptArea/>
+      <CodeMirror
+        value={isUserCodeDirty ? userCode : selectedScriptSourceValue}
+        onBeforeChange={(editor, data, value) => {
+          handleUserCodeEdited(value);
+        }}
+        onChange={(editor, data, value) => {
+        }}
+        options={{lineNumbers: true, mode: "python", theme: "monokai", viewportMargin: Infinity}}
+      />
     </Box>
 
     <Box
