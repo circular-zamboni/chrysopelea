@@ -757,38 +757,43 @@ function Chrysopelea() {
       flexDirection="row"
       padding={2}
       border="default"
+      justifyContent="space-around"
     >
       <Switch
+        flex="1"
+        flexGrow="0"
         label="Show Script"
         value={isShowScriptEnabled}
         onChange={newValue => setShowScriptEnabled(newValue)}
       />
       <Switch
+        flex="1"
+        flexGrow="0"
         label="Show Data Inputs Summary"
         value={isShowDataInputsSummaryEnabled}
         onChange={newValue => setShowDataInputsSummaryEnabled(newValue)}
       />
       <Switch
+        flex="1"
+        flexGrow="0"
         label="Show Data Outputs Summary"
         value={isShowDataOutputsSummaryEnabled}
         onChange={newValue => setShowDataOutputsSummaryEnabled(newValue)}
       />
       <Switch
+        flex="1"
+        flexGrow="0"
         label="Show Script Results"
         value={isShowScriptResultsEnabled}
         onChange={newValue => setShowScriptResultsEnabled(newValue)}
       />
       <Switch
+        flex="1"
+        flexGrow="0"
         label="Show Plots"
         value={isShowPlotsEnabled}
         onChange={newValue => setShowPlotsEnabled(newValue)}
       />
-      <Switch
-        label="Run Automatically When Inputs Are Updated"
-        value={isRunAutomaticallyWhenInputsUpdated}
-        onChange={newValue => setRunAutomaticallyWhenInputsUpdated(newValue)}
-      />
-      <div>choose script, new script, save script, run script, help</div>
     </Box>
 
     <Box
@@ -796,6 +801,7 @@ function Chrysopelea() {
       flexDirection="row"
       padding={2}
       border="default"
+      justifyContent="space-around"
     >
       {isThereAreNoScriptsDialogOpen && (
         <Dialog onClose={() => setThereAreNoScriptsDialogOpen(false)} width="320px">
@@ -812,9 +818,44 @@ function Chrysopelea() {
       <Button
         onClick={() => handleSelectScriptSourceRecord()}
         size="small"
-        icon="edit"
+        icon="search"
       >
       Select Script
+      </Button>
+      <Button
+        onClick={() => handleNewScript()}
+        size="small"
+        icon="plus"
+      >
+      New Script
+      </Button>
+      <Button
+        onClick={() => handleSaveScript()}
+        size="small"
+        icon="up"
+      >
+      Save Script
+      </Button>
+      <Button
+        onClick={() => handleRunScript()}
+        size="small"
+        icon="play"
+      >
+      Run Script
+      </Button>
+      <Switch
+        flex="1"
+        flexGrow="0"
+        label="Run Automatically When Inputs Are Updated"
+        value={isRunAutomaticallyWhenInputsUpdated}
+        onChange={newValue => setRunAutomaticallyWhenInputsUpdated(newValue)}
+      />      
+      <Button
+        onClick={() => handleHelp()}
+        size="small"
+        icon="help"
+      >
+      Help
       </Button>
     </Box>
 
