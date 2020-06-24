@@ -11,6 +11,7 @@ import {
   FieldPickerSynced,
   FormField,
   Heading,
+  Loader,
   TablePickerSynced,
   Text,
   Switch,
@@ -648,7 +649,7 @@ function ConfigureScriptVariable({scriptVariableRecord,
           >
             <ViewPickerSynced
               table={scriptVariableDataTable}
-              globalConfigKey={["selectedDataViewId", scriptVariableName]}
+              globalConfigKey={["scriptVariableDataViewId", scriptVariableName]}
             />
           </FormField>
         )}
@@ -680,16 +681,23 @@ function Chrysopelea() {
   const base = useBase();
   const globalConfig = useGlobalConfig();
 
+  const [scriptResult, setScriptResult] = useState("Script has not run yet.");
+  const [scriptError, setScriptError] = useState("Script has not run yet.");
+
   const [isShowScriptEnabled, setShowScriptEnabled] = useState(true);
   const [isShowDataInputsSummaryEnabled, setShowDataInputsSummaryEnabled] = useState(true);
   const [isShowDataOutputsSummaryEnabled, setShowDataOutputsSummaryEnabled] = useState(true);
   const [isShowScriptResultsEnabled, setShowScriptResultsEnabled] = useState(true);
+  const [isShowScriptErrorsEnabled, setShowScriptErrorsEnabled] = useState(true);
   const [isShowPlotsEnabled, setShowPlotsEnabled] = useState(true);
   const [isRunAutomaticallyWhenInputsUpdated, setRunAutomaticallyWhenInputsUpdated] = useState(false);
   const [isThereAreNoScriptsDialogOpen, setThereAreNoScriptsDialogOpen] = useState(false);
 
   const [isUserCodeDirty, setIsUserCodeDirty] = useState(false);
 
+  const [isScriptRunning, setScriptRunning] = useState(false);
+
+  // Loading script source code.
   const scriptSourceCodeTableId = globalConfig.get("scriptSourceCodeTableId");
   const scriptSourceCodeFieldId = globalConfig.get("scriptSourceCodeFieldId");
   const scriptSourceCodeTable = base.getTableByIdIfExists(scriptSourceCodeTableId);
@@ -706,11 +714,31 @@ function Chrysopelea() {
                                     ? selectedScriptSourceRecord.getCellValueAsString(scriptSourceCodeField)
                                     : "Use the 'Select Script' button to select one, or 'New Script' to create a new one.";
   const selectedScriptSourceName  =   selectedScriptSourceRecord
-                                    ? selectedScriptSourceRecord.primaryCellValueAsString
+                                    ? selectedScriptSourceRecord.name
                                     : "None loaded";
 
   const [userCode, setUserCode] = useState(selectedScriptSourceValue !== undefined ? selectedScriptSourceValue : "");
 
+  // Loading script variable names.
+  const scriptVariableNamesTableId = globalConfig.get("scriptVariableNamesTableId");
+  const scriptVariableNamesViewId = globalConfig.get("scriptVariableNamesViewId");
+  const scriptVariableNamesFieldId = globalConfig.get("scriptVariableNamesFieldId");
+
+  const scriptVariableNamesTable = base.getTableByIdIfExists(scriptVariableNamesTableId);
+  const scriptVariableNamesView =
+      (scriptVariableNamesTable && (scriptVariableNamesViewId !== undefined))
+    ? scriptVariableNamesTable.getViewByIdIfExists(scriptVariableNamesViewId)
+    : null;
+  const scriptVariableNamesQueryResult =
+      scriptVariableNamesView
+    ? scriptVariableNamesView.selectRecords()
+    : null;
+
+  const scriptVariableNamesRecords = useRecords(scriptVariableNamesQueryResult);
+
+  var dataRecords = {};
+
+  // Gets called after DOM is updated; we set it up to run just once.
   useEffect( () => {
       initializePython(
         (status) => { let v = 1; },
@@ -718,9 +746,43 @@ function Chrysopelea() {
       );
       setUserCode(selectedScriptSourceValue);
     },
-    /* Only run 'effect' once, by passing empty array as 2nd argument */
+    // Only run 'effect' once, by passing empty array as 2nd argument.
     []
   );
+
+  var requiredSettingsAreSet = checkRequiredSettingsAreSet();
+
+  if( requiredSettingsAreSet ) {
+    scriptVariableNamesRecords.forEach(scriptVariableNameRecord => {
+
+      var scriptVariableName = scriptVariableNameRecord.getCellValueAsString(scriptVariableNamesFieldId);
+
+      if( scriptVariableName != "" ) {
+        var dataTableId = globalConfig.get(["scriptVariableDataTableId"], scriptVariableName);
+        var dataViewId = globalConfig.get(["scriptVariableDataViewId"], scriptVariableName);
+        var dataTable =
+            dataTableId !== undefined
+          ? base.getTableByIdIfExists(dataTableId)
+          : null;
+        var dataView =
+            dataViewId !== undefined
+          ? base.getViewByIdIfExists(dataViewId)
+          : null;
+
+        const thisVariableDataQueryResult =
+            dataView !== null
+          ? dataView.selectRecords()
+          : null;
+
+        const thisVariableDataRecords =
+          thisVariableDataQueryResult != null
+        ? useRecordsWithUseWatchableCallback(thisVariableDataQueryResult, handleRecordsUpdated)
+        : null;
+
+        dataRecords[scriptVariableName] = thisVariableDataRecords;
+      }
+    });
+  }
 
   const handleSelectScriptSourceRecord = async () => {
     if( scriptSourceCodeRecordsForChoosing == null || scriptSourceCodeRecordsForChoosing.length == 0) {
@@ -748,6 +810,31 @@ function Chrysopelea() {
     .then(() => {
       setIsUserCodeDirty(false);
     });
+  }
+
+  const handlePythonResult = (result) => {
+      setScriptResult(result);
+      setScriptError("No error.");
+  };
+
+  const handlePythonError = (error) => {
+    setScriptResult("Error.");
+    setScriptError(error);
+  }
+
+  const handlePlotsUpdated = (plots) => {
+    // TODO
+  }
+
+  const handleRunScript = event => {
+    runPythonAsync(isUserCodeDirty ? userCode : selectedScriptSourceValue,
+      dataRecords,
+      handlePythonResult,
+      handlePythonError,
+      handlePlotsUpdated,
+      () => {setScriptRunning(true)},
+      () => {setScriptRunning(false)}
+    );
   }
 
   return (
@@ -791,6 +878,13 @@ function Chrysopelea() {
         label="Show Script Results"
         value={isShowScriptResultsEnabled}
         onChange={newValue => setShowScriptResultsEnabled(newValue)}
+      />
+      <Switch
+        flex="1"
+        flexGrow="0"
+        label="Show Script Errors"
+        value={isShowScriptErrorsEnabled}
+        onChange={newValue => setShowScriptErrorsEnabled(newValue)}
       />
       <Switch
         flex="1"
@@ -900,6 +994,7 @@ function Chrysopelea() {
       border="default"
     >
       <Heading>Data Outputs Summary</Heading>
+      {isScriptRunning ? <Loader/> : <Text/>}
       <div>more here</div>
     </Box>
 
@@ -910,7 +1005,23 @@ function Chrysopelea() {
       border="default"
     >
       <Heading>Script Results</Heading>
-      <div>more here</div>
+      {isScriptRunning ? <Loader/> : <Text/>}
+      <Text paddingLeft={2} style={{ backgroundColor: '#272822', borderColor: '#272822' }}>
+        <pre style={{color: '#00CC00'}}>{scriptResult}</pre>
+      </Text>
+    </Box>
+
+    <Box
+      display={isShowScriptErrorsEnabled ? "flex" : "none"}
+      flexDirection="column"
+      padding={2}
+      border="default"
+    >
+      <Heading>Script Errors</Heading>
+      {isScriptRunning ? <Loader/> : <Text/>}
+      <Text paddingLeft={2} style={{ backgroundColor: '#272822', borderColor: '#272822' }}>
+        <pre style={{color: '#00CC00'}}>{scriptError}</pre>
+      </Text>
     </Box>
 
     <Box
@@ -920,9 +1031,17 @@ function Chrysopelea() {
       border="default"
     >
       <Heading>Plots</Heading>
+      {isScriptRunning ? <Loader/> : <Text/>}
       <div>more here</div>
     </Box>
 
+    <Box
+      padding={2}
+      border="default"
+    >
+      <small>Last updated at {new Date().toString()}</small>
+    </Box>
+    
   </Box>
   );
 
@@ -1413,3 +1532,121 @@ var languagePluginLoader = new Promise((resolve, reject) => {
     });
   }
 });
+
+function runPython(userCode, dataRecords, onResult, onError, onPlots) {
+    // This object will be accessible in python using 'from js import airtable'.
+    window.chrysopelea = {};
+    window.chrysopelea.inputs  = {};
+    window.chrysopelea.outputs = {};
+    window.chrysopelea.plots   = {};
+    Object.keys(dataRecords).forEach(key => {
+      window.chrysopelea.inputs[key] = dataRecords[key];
+    });
+    try {
+      const codeToRun = addCodeMagic(userCode);
+      let result = pyodide.runPython(codeToRun);
+      console.log('result: ' + result);
+      onPlots(window.chrysopelea.plots);
+      onResult(result);
+    } catch (e) {
+      console.log(`error: ${e}`);
+      onError(e.message);
+    }
+}
+
+function addCodeMagic(userCode) {
+  // TODO: add method save_airplot to chrysopelea.
+  // TODO: add method for saving outputs to chrysopelea ?
+  return userCode;
+}
+
+function runPythonAsync(code,
+  dataRecords,
+  onResult,
+  onError,
+  onPlots,
+  onBeforeStart,
+  onAfterDone) {
+
+  onBeforeStart();
+
+  setTimeout( () => {
+    runPython(code,
+      dataRecords,
+      (result) => {
+        onAfterDone();
+        onResult(result);
+      },
+      (error) => {
+        onAfterDone();
+        onError(error);
+      },
+      onPlots);
+  }, 100);
+
+}
+
+function checkRequiredSettingsAreSet() {
+  const globalConfig = useGlobalConfig();
+  const base = useBase();
+
+  // Checking on core settings for script source code and script variable names.
+  var settings1 = (
+        globalConfig.get('scriptSourceCodeTableId') !== undefined
+    &&  globalConfig.get('scriptSourceCodeFieldId') !== undefined
+    &&  globalConfig.get('scriptVariableNamesTableId') !== undefined
+    &&  globalConfig.get('scriptVariableNamesViewId') !== undefined
+    &&  globalConfig.get('scriptVariableNamesFieldId') !== undefined
+    );
+
+    const scriptVariableNamesTableId = globalConfig.get("scriptVariableNamesTableId");
+    const scriptVariableNamesViewId = globalConfig.get("scriptVariableNamesViewId");
+    const scriptVariableNamesFieldId = globalConfig.get("scriptVariableNamesFieldId");
+
+    const scriptVariableNamesTable = base.getTableByIdIfExists(scriptVariableNamesTableId);
+
+    const scriptVariableNamesView =
+        (scriptVariableNamesTable && (scriptVariableNamesViewId !== undefined))
+      ? scriptVariableNamesTable.getViewByIdIfExists(scriptVariableNamesViewId)
+      : null;
+
+    const scriptVariableNamesQueryResult =
+        scriptVariableNamesView
+      ? scriptVariableNamesView.selectRecords()
+      : null;
+
+    const scriptVariableNamesRecords = useRecords(scriptVariableNamesQueryResult);
+
+    if( !settings1 ) {
+      return false;
+    }
+
+    // Checking that each of the script variables is configured with a data source (table, view).
+    var result = true;
+    scriptVariableNamesRecords.forEach(record => {
+      var variableName = record.getCellValueAsString(scriptVariableNamesFieldId);
+      if (variableName != "") {
+        if ( globalConfig.get(["scriptVariableDataTableId",variableName]) === undefined ) {
+          result = false;
+        }
+        if ( globalConfig.get(["scriptVariableDataViewId", variableName]) === undefined ) {
+          result = false;
+        }
+      }
+    });
+
+    return result;
+}
+
+function useRecordsWithUseWatchableCallback (queryResult, callback) {
+  if( queryResult == undefined ) {
+    return null;
+  }
+  useLoadable(queryResult);
+  useWatchable(queryResult, ['records', 'cellValues', 'recordColors'],
+      (model, keys) => {
+          callback(model, keys);
+      }
+  );
+  return queryResult ? queryResult.records : null;
+}
