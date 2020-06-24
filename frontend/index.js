@@ -765,8 +765,8 @@ function Chrysopelea() {
           ? base.getTableByIdIfExists(dataTableId)
           : null;
         var dataView =
-            dataViewId !== undefined
-          ? base.getViewByIdIfExists(dataViewId)
+            dataTable !== null
+          ? dataTable.getViewByIdIfExists(dataViewId)
           : null;
 
         const thisVariableDataQueryResult =
@@ -1041,7 +1041,7 @@ function Chrysopelea() {
     >
       <small>Last updated at {new Date().toString()}</small>
     </Box>
-    
+
   </Box>
   );
 
