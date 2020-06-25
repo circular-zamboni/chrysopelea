@@ -11,5 +11,7 @@ Python in Airtable.
 - [ ] option for autorun on input data changes
 - [ ] matplotlib display area
 - [ ] debugging capability (?)
+- [ ] save main display switch states to config
+- [ ] add switch to hide main display controls, on main display and in settings
 - [ ] configure script output images to attachments field(s)
 - [ ] configure script input from github path (?)

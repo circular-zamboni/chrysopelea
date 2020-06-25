@@ -688,6 +688,7 @@ function Chrysopelea() {
 
   const [isShowScriptEnabled, setShowScriptEnabled] = useState(true);
   const [isShowDataInputsSummaryEnabled, setShowDataInputsSummaryEnabled] = useState(true);
+  const [isShowDataInputsSummaryFieldsEnabled, setShowDataInputsSummaryFieldsEnabled] = useState(true);
   const [isShowDataOutputsSummaryEnabled, setShowDataOutputsSummaryEnabled] = useState(true);
   const [isShowScriptResultsEnabled, setShowScriptResultsEnabled] = useState(true);
   const [isShowScriptErrorsEnabled, setShowScriptErrorsEnabled] = useState(true);
@@ -994,6 +995,8 @@ function Chrysopelea() {
       <Heading>Data Inputs Summary</Heading>
       <DataInputsSummary
         dataRecords={dataRecords}
+        isShowDataInputsSummaryFieldsEnabled={isShowDataInputsSummaryFieldsEnabled}
+        setShowDataInputsSummaryFieldsEnabled={setShowDataInputsSummaryFieldsEnabled}
       />
     </Box>
 
@@ -1071,15 +1074,31 @@ function Chrysopelea() {
   */
 }
 
-function DataInputsSummary({dataRecords}) {
+function DataInputsSummary({dataRecords,
+  isShowDataInputsSummaryFieldsEnabled,
+  setShowDataInputsSummaryFieldsEnabled}) {
   return (
-    <table style={{backgroundColor: '#272822', color: '#F8F8F2'}}>
+    <table style={{backgroundColor: '#272822',
+                    color: '#F8F8F2',
+                    borderCollapse: 'collapse',
+                    border: '5px solid #272822'
+                  }}>
       <thead>
         <tr>
-          <th style={{textAlign: 'left'}}>Variable</th>
-          <th style={{textAlign: 'left'}}>Access in script using...</th>
-          <th style={{textAlign: 'left'}}>Number of records</th>
-          <th style={{textAlign: 'left'}}>Fields</th>
+          <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>Variable</th>
+          <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>Access in script using...</th>
+          <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>Number of records</th>
+          <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>
+            <Switch
+              flex="1"
+              flexGrow="0"
+              marginBottom="5px"
+              backgroundColor="#F8F8F2"
+              value={isShowDataInputsSummaryFieldsEnabled}
+              onChange={newValue => setShowDataInputsSummaryFieldsEnabled(newValue)}
+              label="Show Fields"
+            />
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -1087,11 +1106,18 @@ function DataInputsSummary({dataRecords}) {
           Object.keys(dataRecords).map(variableName => {
             return (
               <tr key={variableName}>
-                <td>{variableName}</td>
-                <td><pre style={{color: '#00CC00'}}>chrysopelea.{variableName}</pre></td>
-                <td>{dataRecords[variableName].length}</td>
-                <td>
-                  TODO
+                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{variableName}</td>
+                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>chrysopelea.{variableName}</td>
+                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{dataRecords[variableName].length}</td>
+                <td style={{borderBottom: '1px solid #75715E', width: '60%'}}>
+                  { isShowDataInputsSummaryFieldsEnabled ?
+                    <DataInputsFieldInfo
+                      variableName={variableName}
+                      dataRecord={dataRecords[variableName]}
+                    />
+                    :
+                    ""
+                  }
                 </td>
               </tr>
             );
@@ -1100,6 +1126,39 @@ function DataInputsSummary({dataRecords}) {
       </tbody>
     </table>
   );
+}
+
+function DataInputsFieldInfo({variableName, dataRecord}) {
+  if( dataRecord.length < 1 ) {
+    return ('Fields could not be determined.');
+  }
+
+  // Pulling the field info from the record
+  var record = dataRecord[0];
+
+  return (
+    <table style={{backgroundColor: '#272822', color: '#F8F8F2', width: '100%'}}>
+      <thead>
+        <tr>
+          <th style={{textAlign: 'left'}}>Field Name</th>
+          <th style={{textAlign: 'left'}}>Access in script using e.g...</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          Object.keys(record.parentTable.fields).map(fieldIndex => {
+            var fieldName = record.parentTable.fields[fieldIndex].name;
+            return (
+              <tr key={fieldName}>
+                <td style={{wordBreak: 'break-all', width: '30%'}}>{fieldName}</td>
+                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>all_the_{fieldName} = [row.getCellValue("{fieldName}")] for row in chrysopelea.{variableName}</td>
+              </tr>
+            )
+          })
+        }
+      </tbody>
+    </table>
+  )
 }
 
 initializeBlock(() => <ChrysopeleaBlock />);
