@@ -3,8 +3,10 @@ import {
   initializeBlock,
   useBase,
   useGlobalConfig,
+  useLoadable,
   useRecords,
   useSettingsButton,
+  useWatchable,
   Button,
   Box,
   Dialog,
@@ -696,6 +698,7 @@ function Chrysopelea() {
   const [isUserCodeDirty, setIsUserCodeDirty] = useState(false);
 
   const [isScriptRunning, setScriptRunning] = useState(false);
+  const [liveScriptNeedsRerun, setLiveScriptNeedsRerun] = useState(true);
 
   // Loading script source code.
   const scriptSourceCodeTableId = globalConfig.get("scriptSourceCodeTableId");
@@ -738,6 +741,10 @@ function Chrysopelea() {
 
   var dataRecords = {};
 
+  const handleRecordsUpdated = (models, keys) => {
+    setLiveScriptNeedsRerun(true);
+  }
+
   // Gets called after DOM is updated; we set it up to run just once.
   useEffect( () => {
       initializePython(
@@ -758,8 +765,9 @@ function Chrysopelea() {
       var scriptVariableName = scriptVariableNameRecord.getCellValueAsString(scriptVariableNamesFieldId);
 
       if( scriptVariableName != "" ) {
-        var dataTableId = globalConfig.get(["scriptVariableDataTableId"], scriptVariableName);
-        var dataViewId = globalConfig.get(["scriptVariableDataViewId"], scriptVariableName);
+
+        var dataTableId = globalConfig.get(["scriptVariableDataTableId", scriptVariableName]);
+        var dataViewId = globalConfig.get(["scriptVariableDataViewId", scriptVariableName]);
         var dataTable =
             dataTableId !== undefined
           ? base.getTableByIdIfExists(dataTableId)
@@ -984,7 +992,9 @@ function Chrysopelea() {
       border="default"
     >
       <Heading>Data Inputs Summary</Heading>
-      <div>more here</div>
+      <DataInputsSummary
+        dataRecords={dataRecords}
+      />
     </Box>
 
     <Box
@@ -1059,6 +1069,37 @@ function Chrysopelea() {
     - Help
 
   */
+}
+
+function DataInputsSummary({dataRecords}) {
+  return (
+    <table style={{backgroundColor: '#272822', color: '#F8F8F2'}}>
+      <thead>
+        <tr>
+          <th style={{textAlign: 'left'}}>Variable</th>
+          <th style={{textAlign: 'left'}}>Access in script using...</th>
+          <th style={{textAlign: 'left'}}>Number of records</th>
+          <th style={{textAlign: 'left'}}>Fields</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          Object.keys(dataRecords).map(variableName => {
+            return (
+              <tr key={variableName}>
+                <td>{variableName}</td>
+                <td><pre style={{color: '#00CC00'}}>chrysopelea.{variableName}</pre></td>
+                <td>{dataRecords[variableName].length}</td>
+                <td>
+                  TODO
+                </td>
+              </tr>
+            );
+          })
+        }
+      </tbody>
+    </table>
+  );
 }
 
 initializeBlock(() => <ChrysopeleaBlock />);
