@@ -1151,7 +1151,7 @@ function DataInputsFieldInfo({variableName, dataRecord}) {
             return (
               <tr key={fieldName}>
                 <td style={{wordBreak: 'break-all', width: '30%'}}>{fieldName}</td>
-                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>all_the_{fieldName} = [row.getCellValue("{fieldName}")] for row in chrysopelea.{variableName}</td>
+                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>all_the_{fieldName.replace(/\s/g,'_')} = [row.getCellValue("{fieldName}")] for row in chrysopelea.{variableName}</td>
               </tr>
             )
           })
