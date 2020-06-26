@@ -1171,7 +1171,7 @@ function DataInputsFieldInfo({variableName, dataRecord}) {
             return (
               <tr key={fieldName}>
                 <td style={{wordBreak: 'break-all', width: '30%'}}>{fieldName}</td>
-                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>all_the_{fieldName.replace(/\s/g,'_')} = [row.getCellValue("{fieldName}")] for row in chrysopelea.{variableName}</td>
+                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>all_the_{fieldName.replace(/\s/g,'_')} = [row.getCellValue("{fieldName}") for row in chrysopelea.{variableName}]</td>
               </tr>
             )
           })
@@ -1697,14 +1697,23 @@ function runPython(userCode, dataRecords, onResult, onError, onPlots) {
 }
 
 function addCodeMagic(userCode) {
+  // TODO: line numbers are off in script error messages because of this code.
+  // TODO: fig.savefig takes a long time for fairly example plots...  need to look into it.  Is it the
+  // axis and/or axis labels?
   var magic = `
 def saveAirplot(self, fig, name):
   import io, base64
+  console.log("A")
   buf = io.BytesIO()
+  console.log("B")
   fig.savefig(buf, format='png')
+  console.log("C")
   buf.seek(0)
+  console.log("D")
   imgStr = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')
+  console.log("E")
   self.plots[name] = imgStr
+  console.log("F")
 
 from js import chrysopelea
 import types
