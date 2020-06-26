@@ -701,6 +701,13 @@ function Chrysopelea() {
   const [isScriptRunning, setScriptRunning] = useState(false);
   const [liveScriptNeedsRerun, setLiveScriptNeedsRerun] = useState(true);
 
+  // plots =
+  //      [
+  //        {name: "name", png: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAA…hCIAAAACGIQACAAAY5v8Bl..."},
+  //        ...
+  //      ]
+  const [plots, setPlots] = useState([]);
+
   // Loading script source code.
   const scriptSourceCodeTableId = globalConfig.get("scriptSourceCodeTableId");
   const scriptSourceCodeFieldId = globalConfig.get("scriptSourceCodeFieldId");
@@ -832,7 +839,13 @@ function Chrysopelea() {
   }
 
   const handlePlotsUpdated = (plots) => {
-    // TODO
+    // plots: [ (plotName,plotPng) ]
+    var plotData = Object.entries(plots).map(entry => {
+      var name = entry[0];
+      var png  = entry[1];
+      return {name: name, png: png};
+    });
+    setPlots(plotData);
   }
 
   const handleRunScript = event => {
@@ -1045,7 +1058,14 @@ function Chrysopelea() {
     >
       <Heading>Plots</Heading>
       {isScriptRunning ? <Loader/> : <Text/>}
-      <div>more here</div>
+      <Text>Plot Count : {plots.length}</Text>
+      { plots.length > 0
+        ?
+          <Plots
+            plotData={plots}
+          />
+        : ""
+      }
     </Box>
 
     <Box
@@ -1159,6 +1179,28 @@ function DataInputsFieldInfo({variableName, dataRecord}) {
       </tbody>
     </table>
   )
+}
+
+function Plots({plotData}) {
+  return (
+    <Box
+      flexDirection="column"
+      padding={2}
+      border="default"
+    >
+      {
+        plotData.map(plot => {
+          return (
+            <FormField key={plot.name} label={plot.name}>
+              <div id={"chrysopelea_plot_"+plot.name}>
+                <img src={plot.png}/>
+              </div>
+            </FormField>
+          );
+        })
+      }
+    </Box>
+  );
 }
 
 initializeBlock(() => <ChrysopeleaBlock />);
@@ -1655,9 +1697,22 @@ function runPython(userCode, dataRecords, onResult, onError, onPlots) {
 }
 
 function addCodeMagic(userCode) {
-  // TODO: add method save_airplot to chrysopelea.
+  var magic = `
+def saveAirplot(self, fig, name):
+  import io, base64
+  buf = io.BytesIO()
+  fig.savefig(buf, format='png')
+  buf.seek(0)
+  imgStr = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')
+  self.plots[name] = imgStr
+
+from js import chrysopelea
+import types
+chrysopelea.saveAirplot = types.MethodType(saveAirplot, chrysopelea)
+
+`;
   // TODO: add method for saving outputs to chrysopelea ?
-  return userCode;
+  return magic + userCode;
 }
 
 function runPythonAsync(code,
