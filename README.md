@@ -15,3 +15,4 @@ Python in Airtable.
 - [ ] add switch to hide main display controls, on main display and in settings
 - [ ] configure script output images to attachments field(s)
 - [ ] configure script input from github path (?)
+- [ ] disable running until all of pyodide including libs are loaded

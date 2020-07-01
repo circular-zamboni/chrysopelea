@@ -1687,33 +1687,25 @@ function runPython(userCode, dataRecords, onResult, onError, onPlots) {
     try {
       const codeToRun = addCodeMagic(userCode);
       let result = pyodide.runPython(codeToRun);
-      console.log('result: ' + result);
+      console.debug('script result: ' + result);
       onPlots(window.chrysopelea.plots);
       onResult(result);
     } catch (e) {
-      console.log(`error: ${e}`);
+      console.error(`error: ${e}`);
       onError(e.message);
     }
 }
 
 function addCodeMagic(userCode) {
   // TODO: line numbers are off in script error messages because of this code.
-  // TODO: fig.savefig takes a long time for fairly example plots...  need to look into it.  Is it the
-  // axis and/or axis labels?
   var magic = `
 def saveAirplot(self, fig, name):
   import io, base64
-  console.log("A")
   buf = io.BytesIO()
-  console.log("B")
   fig.savefig(buf, format='png')
-  console.log("C")
   buf.seek(0)
-  console.log("D")
   imgStr = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')
-  console.log("E")
   self.plots[name] = imgStr
-  console.log("F")
 
 from js import chrysopelea
 import types
