@@ -679,6 +679,13 @@ function ThereAreNoScriptsDialog() {
   );
 };
 
+function getConfigPathElse(globalConfig, configPath, elseValue) {
+  if( globalConfig.get(configPath) !== undefined ) {
+    return globalConfig.get(configPath);
+  }
+  return elseValue;
+}
+
 function Chrysopelea() {
   const base = useBase();
   const globalConfig = useGlobalConfig();
@@ -688,14 +695,16 @@ function Chrysopelea() {
 
   const [isPyodideInitialized, setIsPyodideInitialized] = useState(false);
   const [pythonStatusMsg, setPythonStatusMsg] = useState("Idle");
-  const [isShowScriptEnabled, setShowScriptEnabled] = useState(true);
-  const [isShowDataInputsSummaryEnabled, setShowDataInputsSummaryEnabled] = useState(true);
-  const [isShowDataInputsSummaryFieldsEnabled, setShowDataInputsSummaryFieldsEnabled] = useState(true);
-  const [isShowDataOutputsSummaryEnabled, setShowDataOutputsSummaryEnabled] = useState(true);
-  const [isShowScriptResultsEnabled, setShowScriptResultsEnabled] = useState(true);
-  const [isShowScriptErrorsEnabled, setShowScriptErrorsEnabled] = useState(true);
-  const [isShowPlotsEnabled, setShowPlotsEnabled] = useState(true);
-  const [isRunAutomaticallyWhenInputsUpdated, setRunAutomaticallyWhenInputsUpdated] = useState(false);
+
+  const isShowScriptEnabled                   = getConfigPathElse(globalConfig, 'isShowScriptEnabled', true);
+  const isShowDataInputsSummaryEnabled        = getConfigPathElse(globalConfig, 'isShowDataInputsSummaryEnabled', true);
+  const isShowDataInputsSummaryFieldsEnabled  = getConfigPathElse(globalConfig, 'isShowDataInputsSummaryFieldsEnabled', false);
+  const isShowDataOutputsSummaryEnabled       = getConfigPathElse(globalConfig, 'isShowDataOutputsSummaryEnabled', true);
+  const isShowScriptResultsEnabled            = getConfigPathElse(globalConfig, 'isShowScriptResultsEnabled', true);
+  const isShowScriptErrorsEnabled             = getConfigPathElse(globalConfig, 'isShowScriptErrorsEnabled', true);
+  const isShowPlotsEnabled                    = getConfigPathElse(globalConfig, 'isShowPlotsEnabled', true);
+  const isRunAutomaticallyWhenInputsUpdated   = getConfigPathElse(globalConfig, 'isRunAutomaticallyWhenInputsUpdated', false);
+
   const [isThereAreNoScriptsDialogOpen, setThereAreNoScriptsDialogOpen] = useState(false);
 
   const [isUserCodeDirty, setIsUserCodeDirty] = useState(false);
@@ -892,42 +901,42 @@ function Chrysopelea() {
         flexGrow="0"
         label="Show Script"
         value={isShowScriptEnabled}
-        onChange={newValue => setShowScriptEnabled(newValue)}
+        onChange={newValue => globalConfig.setAsync('isShowScriptEnabled', newValue)}
       />
       <Switch
         flex="1"
         flexGrow="0"
         label="Show Data Inputs Summary"
         value={isShowDataInputsSummaryEnabled}
-        onChange={newValue => setShowDataInputsSummaryEnabled(newValue)}
+        onChange={newValue => globalConfig.setAsync('isShowDataInputsSummaryEnabled', newValue)}
       />
       <Switch
         flex="1"
         flexGrow="0"
         label="Show Data Outputs Summary"
         value={isShowDataOutputsSummaryEnabled}
-        onChange={newValue => setShowDataOutputsSummaryEnabled(newValue)}
+        onChange={newValue => globalConfig.setAsync('isShowDataOutputsSummaryEnabled', newValue)}
       />
       <Switch
         flex="1"
         flexGrow="0"
         label="Show Script Results"
         value={isShowScriptResultsEnabled}
-        onChange={newValue => setShowScriptResultsEnabled(newValue)}
+        onChange={newValue => globalConfig.setAsync('isShowScriptResultsEnabled', newValue)}
       />
       <Switch
         flex="1"
         flexGrow="0"
         label="Show Script Errors"
         value={isShowScriptErrorsEnabled}
-        onChange={newValue => setShowScriptErrorsEnabled(newValue)}
+        onChange={newValue => globalConfig.setAsync('isShowScriptErrorsEnabled', newValue)}
       />
       <Switch
         flex="1"
         flexGrow="0"
         label="Show Plots"
         value={isShowPlotsEnabled}
-        onChange={newValue => setShowPlotsEnabled(newValue)}
+        onChange={newValue => globalConfig.setAsync('isShowPlotsEnabled', newValue)}
       />
     </Box>
 
@@ -1035,7 +1044,7 @@ function Chrysopelea() {
       <DataInputsSummary
         dataRecords={dataRecords}
         isShowDataInputsSummaryFieldsEnabled={isShowDataInputsSummaryFieldsEnabled}
-        setShowDataInputsSummaryFieldsEnabled={setShowDataInputsSummaryFieldsEnabled}
+        setShowDataInputsSummaryFieldsEnabled={(newValue) => globalConfig.setAsync('isShowDataInputsSummaryFieldsEnabled', newValue)}
       />
     </Box>
 
