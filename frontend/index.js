@@ -1550,7 +1550,7 @@ function DataInputsFieldInfo({variableName, dataRecord}) {
             return (
               <tr key={fieldName}>
                 <td style={{wordBreak: 'break-all', width: '30%'}}>{fieldName}</td>
-                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>all_the_{fieldName.replace(/\s/g,'_')} = [row.getCellValue("{fieldName}") for row in chrysopelea.{variableName}]</td>
+                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>all_the_{fieldName.replace(/\s/g,'_')} = [row.getCellValue("{fieldName}") for row in chrysopelea.inputs.{variableName}]</td>
               </tr>
             )
           })
@@ -1633,7 +1633,7 @@ function DataOutputsFieldInfo({variableName, data}) {
       <tbody>
         {
           // all_the_{fieldName.replace(/\s/g,'_')} = [row.getCellValue("{fieldName}") for row in chrysopelea.{variableName}]
-          dataTable.fields.map(field => {            
+          dataTable.fields.map(field => {
             var fieldName = field.name;
             return (
               <tr key={fieldName}>
@@ -2148,7 +2148,7 @@ function runPython(userCode, inputDataRecords, onResult, onError, onPlots) {
     window.chrysopelea.inputs  = {};
     window.chrysopelea.outputs = {};
     window.chrysopelea.plots   = {};
-    Object.keys(inputDataRecords).forEach(key => {
+    Object.keys(inputDataRecords).map(key => {
       window.chrysopelea.inputs[key] = inputDataRecords[key];
     });
     try {
