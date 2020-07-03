@@ -473,10 +473,12 @@ function ChrysopeleaBlock() {
   });
 
   if (isShowingSettings) {
-    return <SettingsComponent />
+    return <SettingsComponent/>
   }
 
-  return <Chrysopelea />
+  return <Chrysopelea
+            setIsShowingSettings={setIsShowingSettings}
+  />
 }
 
 function SettingsComponent() {
@@ -552,7 +554,6 @@ function SettingsComponent() {
   padding={2}
   border="none"
   >
-
     <FormField
       label="Configure Display"
     >
@@ -950,7 +951,7 @@ function getConfigPathElse(globalConfig, configPath, elseValue) {
   return elseValue;
 }
 
-function Chrysopelea() {
+function Chrysopelea({setIsShowingSettings}) {
   const base = useBase();
   const globalConfig = useGlobalConfig();
 
@@ -1157,7 +1158,8 @@ function Chrysopelea() {
   }
 
   if( !requiredSettingsAreSet ) {
-    return <SettingsComponent />;
+    setIsShowingSettings(true);
+    return null;
   }
 
   return (
@@ -2063,54 +2065,83 @@ function runPythonAsync(code,
 }
 
 function checkRequiredSettingsAreSet() {
+  // TODO: this method is so ugly.
   const globalConfig = useGlobalConfig();
   const base = useBase();
 
   const isScriptInputVariablesEnabled = getConfigPathElse(globalConfig, "isScriptInputVariablesEnabled", true);
+  const isScriptOutputVariablesEnabled = getConfigPathElse(globalConfig, "isScriptOutputVariablesEnabled", false);
 
   // Checking on core settings for script source code and script variable names.
-  var settings1 = (
+  var sourceCodeSettingsAreSet = (
         globalConfig.get('scriptSourceCodeTableId') !== undefined
     &&  globalConfig.get('scriptSourceCodeFieldId') !== undefined
   );
 
-  var settings2 = (
+  var scriptInputVariableNamesSettingsAreSet = (
         globalConfig.get('scriptInputVariableNamesTableId') !== undefined
     &&  globalConfig.get('scriptInputVariableNamesViewId') !== undefined
     &&  globalConfig.get('scriptInputVariableNamesFieldId') !== undefined
   );
 
-    const scriptInputVariableNamesTableId = globalConfig.get("scriptInputVariableNamesTableId");
-    const scriptInputVariableNamesViewId = globalConfig.get("scriptInputVariableNamesViewId");
-    const scriptInputVariableNamesFieldId = globalConfig.get("scriptInputVariableNamesFieldId");
+  var scriptOutputVariableNamesSettingsAreSet = (
+        globalConfig.get('scriptOutputVariableNamesTableId') !== undefined
+    &&  globalConfig.get('scriptOutputVariableNamesViewId') !== undefined
+    &&  globalConfig.get('scriptOutputVariableNamesFieldId') !== undefined
+  )
 
-    const scriptInputVariableNamesTable = base.getTableByIdIfExists(scriptInputVariableNamesTableId);
+  const scriptInputVariableNamesTableId = globalConfig.get("scriptInputVariableNamesTableId");
+  const scriptInputVariableNamesViewId = globalConfig.get("scriptInputVariableNamesViewId");
+  const scriptInputVariableNamesFieldId = globalConfig.get("scriptInputVariableNamesFieldId");
 
-    const scriptInputVariableNamesView =
-        (scriptInputVariableNamesTable && (scriptInputVariableNamesViewId !== undefined))
-      ? scriptInputVariableNamesTable.getViewByIdIfExists(scriptInputVariableNamesViewId)
-      : null;
+  const scriptInputVariableNamesTable = base.getTableByIdIfExists(scriptInputVariableNamesTableId);
 
-    const scriptInputVariableNamesQueryResult =
-        scriptInputVariableNamesView
-      ? scriptInputVariableNamesView.selectRecords()
-      : null;
+  const scriptInputVariableNamesView =
+      (scriptInputVariableNamesTable && (scriptInputVariableNamesViewId !== undefined))
+    ? scriptInputVariableNamesTable.getViewByIdIfExists(scriptInputVariableNamesViewId)
+    : null;
 
-    const scriptInputVariableNamesRecords = useRecords(scriptInputVariableNamesQueryResult);
+  const scriptInputVariableNamesQueryResult =
+      scriptInputVariableNamesView
+    ? scriptInputVariableNamesView.selectRecords()
+    : null;
 
-    if( !settings1 ) {
+  const scriptInputVariableNamesRecords = useRecords(scriptInputVariableNamesQueryResult);
+
+  const scriptOutputVariableNamesTableId = globalConfig.get("scriptOutputVariableNamesTableId");
+  const scriptOutputVariableNamesViewId = globalConfig.get("scriptOutputVariableNamesViewId");
+  const scriptOutputVariableNamesFieldId = globalConfig.get("scriptOutputVariableNamesFieldId");
+
+  const scriptOutputVariableNamesTable = base.getTableByIdIfExists(scriptOutputVariableNamesTableId);
+
+  const scriptOutputVariableNamesView =
+      (scriptOutputVariableNamesTable && (scriptOutputVariableNamesViewId !== undefined))
+    ? scriptOutputVariableNamesTable.getViewByIdIfExists(scriptOutputVariableNamesViewId)
+    : null;
+
+  const scriptOutputVariableNamesQueryResult =
+      scriptOutputVariableNamesView
+    ? scriptOutputVariableNamesView.selectRecords()
+    : null;
+
+  const scriptOutputVariableNamesRecords = useRecords(scriptOutputVariableNamesQueryResult);
+
+  if( !sourceCodeSettingsAreSet ) {
+    return false;
+  }
+
+  // All done checking if we aren't doing any script variables.
+  if( !isScriptInputVariablesEnabled && !isScriptOutputVariablesEnabled ) {
+    return true;
+  }
+
+  if( isScriptInputVariablesEnabled ) {
+
+    if( !scriptInputVariableNamesSettingsAreSet ) {
       return false;
     }
 
-    if( !isScriptInputVariablesEnabled ) {
-      return true;
-    }
-
-    if( !settings2 ) {
-      return false;
-    }
-
-    // Checking that each of the script variables is configured with a data source (table, view).
+    // Checking that each of the script input variables is configured with a data source (table, view).
     var result = true;
     scriptInputVariableNamesRecords.forEach(record => {
       var variableName = record.getCellValueAsString(scriptInputVariableNamesFieldId);
@@ -2124,7 +2155,34 @@ function checkRequiredSettingsAreSet() {
       }
     });
 
-    return result;
+    if( !result ) {
+      return false;
+    }
+  }
+
+  if( isScriptOutputVariablesEnabled ) {
+
+    if( !scriptOutputVariableNamesSettingsAreSet ) {
+      return false;
+    }
+
+    // Checking that each of the script output variables is configured with a data destination (table).
+    var result = true;
+    scriptOutputVariableNamesRecords.forEach(record => {
+      var variableName = record.getCellValueAsString(scriptOutputVariableNamesFieldId);
+      if (variableName != "") {
+        if ( globalConfig.get(["scriptOutputVariableDataTableId",variableName]) === undefined ) {
+          result = false;
+        }
+      }
+    });
+
+    if( !result ) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function useRecordsWithUseWatchableCallback (queryResult, callback) {
