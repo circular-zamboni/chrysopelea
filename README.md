@@ -6,6 +6,8 @@ Python in Airtable.
 - [x] configure script input data
 - [ ] configure script output data
 - [x] code editor w/ python highlighting
+- [x] select script
+- [ ] new script
 - [x] run script
 - [x] pull data inputs into script
 - [ ] pushing data outputs out of script
