@@ -4,6 +4,7 @@ Python in Airtable.
 - [x] load pyodide from cdn
 - [ ] provide option for where to load pyodide from
 - [x] configure script input data
+- [ ] configure a subset of fields to bring in for script input data
 - [ ] configure script output data
 - [x] code editor w/ python highlighting
 - [x] select script
