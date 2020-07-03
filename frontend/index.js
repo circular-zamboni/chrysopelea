@@ -687,6 +687,10 @@ function SettingsComponent() {
               return <ConfigureScriptVariable
                 scriptVariableRecord={scriptInputVariableRecord}
                 scriptVariableNamesField={scriptInputVariableNamesField}
+                tablePickerGlobalConfigKeyPath="scriptInputVariableDataTableId"
+                viewPickerGlobalConfigKeyPath="scriptInputVariableDataViewId"
+                tablePickerTooltipText="The table containing the data you want to use to populate this script variable."
+                viewPickerTooltipText="The view containing the data you want to use to populate this script variable."
               />;
             })}
           </Box>
@@ -699,7 +703,11 @@ function SettingsComponent() {
 }
 
 function ConfigureScriptVariable({scriptVariableRecord,
-                                  scriptVariableNamesField}) {
+                                  scriptVariableNamesField,
+                                  tablePickerGlobalConfigKeyPath,
+                                  viewPickerGlobalConfigKeyPath,
+                                  tablePickerTooltipText,
+                                  viewPickerTooltipText}) {
   const base = useBase();
   const globalConfig = useGlobalConfig();
 
@@ -707,7 +715,7 @@ function ConfigureScriptVariable({scriptVariableRecord,
     = scriptVariableRecord.getCellValueAsString(scriptVariableNamesField);
 
   const scriptVariableDataTableId
-    = globalConfig.get(["scriptInputVariableDataTableId", scriptVariableName]);
+    = globalConfig.get([tablePickerGlobalConfigKeyPath, scriptVariableName]);
 
   const scriptVariableDataTable
     = base.getTableByIdIfExists(scriptVariableDataTableId);
@@ -726,12 +734,12 @@ function ConfigureScriptVariable({scriptVariableRecord,
           label="Data Table"
         >
           <Tooltip
-            content="The table containing the data you want to use to populate this script variable."
+            content={tablePickerTooltipText}
             placementX={Tooltip.placements.CENTER}
             placementY={Tooltip.placements.BOTTOM}
           >
             <TablePickerSynced
-              globalConfigKey={["scriptInputVariableDataTableId", scriptVariableName]}
+              globalConfigKey={[tablePickerGlobalConfigKeyPath, scriptVariableName]}
             />
           </Tooltip>
         </FormField>
@@ -740,13 +748,13 @@ function ConfigureScriptVariable({scriptVariableRecord,
             label="Data View"
           >
             <Tooltip
-              content="The view containing the data you want to use to populate this script variable."
+              content={viewPickerTooltipText}
               placementX={Tooltip.placements.CENTER}
               placementY={Tooltip.placements.BOTTOM}
             >
               <ViewPickerSynced
                 table={scriptVariableDataTable}
-                globalConfigKey={["scriptInputVariableDataViewId", scriptVariableName]}
+                globalConfigKey={[viewPickerGlobalConfigKeyPath, scriptVariableName]}
               />
             </Tooltip>
           </FormField>
@@ -921,7 +929,7 @@ function Chrysopelea() {
 
           dataRecords[scriptInputVariableName] = thisVariableDataRecords;
         }
-      });      
+      });
     }
   }
 
