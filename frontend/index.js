@@ -533,7 +533,7 @@ function SettingsComponent() {
         backgroundColor="lightGray1"
       >
         <Tooltip
-          content="This is referring to the controls at the top of the block when you are not in settings mode"
+          content="This is referring to the controls at the top of the block when you are not in settings mode."
           placementX={Tooltip.placements.CENTER}
           placementY={Tooltip.placements.BOTTOM}
         >
@@ -547,7 +547,50 @@ function SettingsComponent() {
     </FormField>
 
     <FormField
+      label="Configure Script Storage"
+      description="Tell this block where to get your python script(s) from."
+    >
+      <Box
+        display="flex"
+        flexDirection="row"
+        padding={2}
+        border="thick"
+      >
+        <FormField
+          label="Script Source Code Table"
+        >
+          <Tooltip
+            content="The table that contains your python script(s)."
+            placementX={Tooltip.placements.CENTER}
+            placementY={Tooltip.placements.BOTTOM}
+          >
+            <TablePickerSynced
+              globalConfigKey="scriptSourceCodeTableId"
+            />
+          </Tooltip>
+        </FormField>
+        { scriptSourceCodeTable && (
+          <FormField
+            label="Script Source Code Field"
+          >
+            <Tooltip
+              content="The field that contains your python script(s)."
+              placementX={Tooltip.placements.CENTER}
+              placementY={Tooltip.placements.BOTTOM}
+            >
+              <FieldPickerSynced
+                table={scriptSourceCodeTable}
+                globalConfigKey="scriptSourceCodeFieldId"
+              />
+            </Tooltip>
+          </FormField>
+        )}
+      </Box>
+    </FormField>
+
+    <FormField
       label="Configure Script Variable Names"
+      description="Tell this block what are all the python script variables that you want to define and populate with Airtable data."
     >
       <Box
         display="flex"
@@ -558,29 +601,44 @@ function SettingsComponent() {
       >
         <FormField
           label="Script Variable Names List Table"
-          description="The table that contains your list of script variable names."
         >
-          <TablePickerSynced
-            globalConfigKey="scriptVariableNamesTableId" />
+          <Tooltip
+            content="The table that contains your list of script variable names."
+            placementX={Tooltip.placements.CENTER}
+            placementY={Tooltip.placements.BOTTOM}
+          >
+            <TablePickerSynced
+              globalConfigKey="scriptVariableNamesTableId" />
+          </Tooltip>
         </FormField>
         { scriptVariableNamesTable && (
         <FormField
           label="Script Variable Names List View"
-          description="The view that contains your list of script variable names."
         >
-          <ViewPickerSynced
-            table={scriptVariableNamesTable}
-            globalConfigKey="scriptVariableNamesViewId" />
+          <Tooltip
+            content="The view that contains your list of script variable names."
+            placementX={Tooltip.placements.CENTER}
+            placementY={Tooltip.placements.BOTTOM}
+          >
+            <ViewPickerSynced
+              table={scriptVariableNamesTable}
+              globalConfigKey="scriptVariableNamesViewId" />
+          </Tooltip>
         </FormField>
         )}
         { scriptVariableNamesTable && (
         <FormField
           label="Script Variable Names List Field"
-          description="The field that defines your script variable names."
         >
-          <FieldPickerSynced
-            table={scriptVariableNamesTable}
-            globalConfigKey="scriptVariableNamesFieldId" />
+          <Tooltip
+            content="The field that defines your script variable names."
+            placementX={Tooltip.placements.CENTER}
+            placementY={Tooltip.placements.BOTTOM}
+          >
+            <FieldPickerSynced
+              table={scriptVariableNamesTable}
+              globalConfigKey="scriptVariableNamesFieldId" />
+          </Tooltip>
         </FormField>
         )}
       </Box>
@@ -589,6 +647,7 @@ function SettingsComponent() {
     {scriptVariableRecords && scriptVariableNamesField && (
       <FormField
         label="Configure Script Variable Data"
+        description=""
       >
         <Box
           display="flex"
@@ -610,34 +669,6 @@ function SettingsComponent() {
       </FormField>
     )}
 
-    <FormField
-      label="Configure Script Storage"
-    >
-      <Box
-        display="flex"
-        flexDirection="row"
-        padding={2}
-        border="thick"
-      >
-        <FormField
-          label="Script Source Code Table"
-        >
-          <TablePickerSynced
-            globalConfigKey="scriptSourceCodeTableId"
-          />
-        </FormField>
-        { scriptSourceCodeTable && (
-          <FormField
-            label="Script Source Code Field"
-          >
-            <FieldPickerSynced
-              table={scriptSourceCodeTable}
-              globalConfigKey="scriptSourceCodeFieldId"
-            />
-          </FormField>
-        )}
-      </Box>
-    </FormField>
     </Box>
   );
 }
@@ -669,18 +700,30 @@ function ConfigureScriptVariable({scriptVariableRecord,
         <FormField
           label="Data Table"
         >
-          <TablePickerSynced
-            globalConfigKey={["scriptVariableDataTableId", scriptVariableName]}
-          />
+          <Tooltip
+            content="The table containing the data you want to use to populate this script variable."
+            placementX={Tooltip.placements.CENTER}
+            placementY={Tooltip.placements.BOTTOM}
+          >
+            <TablePickerSynced
+              globalConfigKey={["scriptVariableDataTableId", scriptVariableName]}
+            />
+          </Tooltip>
         </FormField>
         { scriptVariableDataTable && (
           <FormField
             label="Data View"
           >
-            <ViewPickerSynced
-              table={scriptVariableDataTable}
-              globalConfigKey={["scriptVariableDataViewId", scriptVariableName]}
-            />
+            <Tooltip
+              content="The view containing the data you want to use to populate this script variable."
+              placementX={Tooltip.placements.CENTER}
+              placementY={Tooltip.placements.BOTTOM}
+            >
+              <ViewPickerSynced
+                table={scriptVariableDataTable}
+                globalConfigKey={["scriptVariableDataViewId", scriptVariableName]}
+              />
+            </Tooltip>
           </FormField>
         )}
       </Box>
