@@ -448,11 +448,11 @@ function initializePython(onStatusChanged, onInitializeComplete) {
           'np.average(a)\n'
         );
         console.log(`Test script output, should be [1.5]: [${s}]`);
-      });
 
-      console.log('Language and libraries loaded successfully');
-      onStatusChanged('Language and libraries loaded successfully');
-      onInitializeComplete();
+        console.log('Language and libraries loaded successfully');
+        onStatusChanged('Language and libraries loaded successfully');
+        onInitializeComplete();
+      });
 
     });
 
@@ -686,6 +686,7 @@ function Chrysopelea() {
   const [scriptResult, setScriptResult] = useState("Script has not run yet.");
   const [scriptError, setScriptError] = useState("Script has not run yet.");
 
+  const [isPyodideInitialized, setIsPyodideInitialized] = useState(false);
   const [isShowScriptEnabled, setShowScriptEnabled] = useState(true);
   const [isShowDataInputsSummaryEnabled, setShowDataInputsSummaryEnabled] = useState(true);
   const [isShowDataInputsSummaryFieldsEnabled, setShowDataInputsSummaryFieldsEnabled] = useState(true);
@@ -756,8 +757,14 @@ function Chrysopelea() {
   // Gets called after DOM is updated; we set it up to run just once.
   useEffect( () => {
       initializePython(
-        (status) => { let v = 1; },
-        () =>       { let v = 1; }
+        // status changed
+        (status) => {
+          let v = 1;
+        },
+        // initialization complete
+        () => {
+          setIsPyodideInitialized(true);
+        }
       );
       setUserCode(selectedScriptSourceValue);
     },
@@ -962,6 +969,7 @@ function Chrysopelea() {
         onClick={() => handleRunScript()}
         size="small"
         icon="play"
+        disabled={!isPyodideInitialized}
       >
       Run Script
       </Button>

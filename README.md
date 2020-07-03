@@ -18,5 +18,6 @@ Python in Airtable.
 - [ ] save main display switch states to config, (including "show fields")
 - [ ] add switch to hide main display controls, on main display and in settings
 - [ ] configure script input from github path (?)
-- [ ] disable running until all of pyodide including libs are loaded
+- [x] disable running until all of pyodide including libs are loaded
 - [ ] react properly when script table rows added/removed
+- [ ] make chrysopelea object be a proper import in python land
