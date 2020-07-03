@@ -589,7 +589,7 @@ function SettingsComponent() {
     </FormField>
 
     <FormField
-      label="Configure Script Variable Names"
+      label="Configure Script Input Variable Names"
       description="Tell this block what are all the python script variables that you want to define and populate with Airtable data."
     >
       <Box
@@ -646,8 +646,8 @@ function SettingsComponent() {
 
     {scriptVariableRecords && scriptVariableNamesField && (
       <FormField
-        label="Configure Script Variable Data"
-        description=""
+        label="Configure Script Input Variable Data"
+        description="For each of the script input variables that you've defined, tell this block what Airtable table/view to read from to populate the variable."
       >
         <Box
           display="flex"
