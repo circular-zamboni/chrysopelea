@@ -687,6 +687,7 @@ function Chrysopelea() {
   const [scriptError, setScriptError] = useState("Script has not run yet.");
 
   const [isPyodideInitialized, setIsPyodideInitialized] = useState(false);
+  const [pythonStatusMsg, setPythonStatusMsg] = useState("Idle");
   const [isShowScriptEnabled, setShowScriptEnabled] = useState(true);
   const [isShowDataInputsSummaryEnabled, setShowDataInputsSummaryEnabled] = useState(true);
   const [isShowDataInputsSummaryFieldsEnabled, setShowDataInputsSummaryFieldsEnabled] = useState(true);
@@ -754,12 +755,18 @@ function Chrysopelea() {
     setLiveScriptNeedsRerun(true);
   }
 
+  const handlePythonStatusChanged = (status) => {
+    if (status != pythonStatusMsg) {
+      setPythonStatusMsg(status);
+    }
+  }
+
   // Gets called after DOM is updated; we set it up to run just once.
   useEffect( () => {
       initializePython(
         // status changed
         (status) => {
-          let v = 1;
+          handlePythonStatusChanged(status);
         },
         // initialization complete
         () => {
@@ -965,14 +972,25 @@ function Chrysopelea() {
       >
       Save Script
       </Button>
-      <Button
-        onClick={() => handleRunScript()}
-        size="small"
-        icon="play"
-        disabled={!isPyodideInitialized}
+      <Box
+        flexDirection="column"
+        padding={0}
       >
-      Run Script
-      </Button>
+        <Button
+          onClick={() => handleRunScript()}
+          size="small"
+          icon="play"
+          disabled={!isPyodideInitialized}
+        >
+          Run Script
+        </Button>
+        <Text
+          size="small"
+          display={isPyodideInitialized ? "none" : "flex"}
+        >
+          Script engine loading...
+        </Text>
+      </Box>
       <Switch
         flex="1"
         flexGrow="0"
