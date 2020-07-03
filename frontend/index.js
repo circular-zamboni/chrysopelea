@@ -16,6 +16,7 @@ import {
   Loader,
   TablePickerSynced,
   Text,
+  Tooltip,
   Switch,
   ViewPickerSynced
 } from '@airtable/blocks/ui';
@@ -481,6 +482,8 @@ function SettingsComponent() {
   const base = useBase();
   const globalConfig = useGlobalConfig();
 
+  const isBlockControlsEnabled = getConfigPathElse(globalConfig, "isBlockControlsEnabled", true);
+
   const scriptVariableNamesTableId
     = globalConfig.get("scriptVariableNamesTableId");
 
@@ -518,6 +521,31 @@ function SettingsComponent() {
     padding={2}
     border="none"
     >
+
+    <FormField
+      label="Configure Display"
+    >
+      <Box
+        display="flex"
+        flexDirection="column"
+        padding={2}
+        border="thick"
+        backgroundColor="lightGray1"
+      >
+        <Tooltip
+          content="This is referring to the controls at the top of the block when you are not in settings mode"
+          placementX={Tooltip.placements.CENTER}
+          placementY={Tooltip.placements.BOTTOM}
+        >
+          <Switch
+            value={isBlockControlsEnabled}
+            onChange={newValue => globalConfig.setAsync('isBlockControlsEnabled', newValue)}
+            label="Show Block Controls"
+          />
+        </Tooltip>
+      </Box>
+    </FormField>
+
     <FormField
       label="Configure Script Variable Names"
     >
@@ -704,6 +732,7 @@ function Chrysopelea() {
   const isShowScriptErrorsEnabled             = getConfigPathElse(globalConfig, 'isShowScriptErrorsEnabled', true);
   const isShowPlotsEnabled                    = getConfigPathElse(globalConfig, 'isShowPlotsEnabled', true);
   const isRunAutomaticallyWhenInputsUpdated   = getConfigPathElse(globalConfig, 'isRunAutomaticallyWhenInputsUpdated', false);
+  const isBlockControlsEnabled                = getConfigPathElse(globalConfig, 'isBlockControlsEnabled', true);
 
   const [isThereAreNoScriptsDialogOpen, setThereAreNoScriptsDialogOpen] = useState(false);
 
@@ -890,7 +919,7 @@ function Chrysopelea() {
     border="thick"
   >
     <Box
-      display="flex"
+      display={isBlockControlsEnabled ? "flex" : "none"}
       flexDirection="row"
       padding={2}
       border="default"
@@ -941,7 +970,7 @@ function Chrysopelea() {
     </Box>
 
     <Box
-      display="flex"
+      display={isBlockControlsEnabled ? "flex" : "none"}
       flexDirection="row"
       padding={2}
       border="default"
