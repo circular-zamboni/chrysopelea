@@ -1011,7 +1011,7 @@ function Chrysopelea({setIsShowingSettings}) {
 
   const [userCode, setUserCode] = useState(selectedScriptSourceValue !== undefined ? selectedScriptSourceValue : "");
 
-  // Loading script variable names.
+  // Loading script input variable names.
   const scriptInputVariableNamesTableId = globalConfig.get("scriptInputVariableNamesTableId");
   const scriptInputVariableNamesViewId = globalConfig.get("scriptInputVariableNamesViewId");
   const scriptInputVariableNamesFieldId = globalConfig.get("scriptInputVariableNamesFieldId");
@@ -1026,10 +1026,41 @@ function Chrysopelea({setIsShowingSettings}) {
     ? scriptInputVariableNamesView.selectRecords()
     : null;
 
+  // Loading script output variable names.
+  const scriptOutputVariableNamesTableId = globalConfig.get("scriptOutputVariableNamesTableId");
+  const scriptOutputVariableNamesViewId = globalConfig.get("scriptOutputVariableNamesViewId");
+  const scriptOutputVariableNamesFieldId = globalConfig.get("scriptOutputVariableNamesFieldId");
+
+  const scriptOutputVariableNamesTable = base.getTableByIdIfExists(scriptOutputVariableNamesTableId);
+  const scriptOutputVariableNamesView =
+      (scriptOutputVariableNamesTable && (scriptOutputVariableNamesViewId !== undefined))
+    ? scriptOutputVariableNamesTable.getViewByIdIfExists(scriptOutputVariableNamesViewId)
+    : null;
+  const scriptOutputVariableNamesQueryResult =
+      scriptOutputVariableNamesView
+    ? scriptOutputVariableNamesView.selectRecords()
+    : null;
+
+
   const scriptInputVariableNamesRecords = useRecords(scriptInputVariableNamesQueryResult);
 
-  // Dictionary keyed on scriptInputVariableName.  Value is query result with data for that variable.
+  const scriptOutputVariableNamesRecords = useRecords(scriptOutputVariableNamesQueryResult);
+
+  // Dictionary keyed on scriptInputVariableName. Value is query result with data for that variable.
   var inputDataRecords = {};
+
+  // Dictionary keyed on scriptOutputVariableNAme. Value is array of data for that variable, to be written
+  // or already written by script.
+  //
+  // {
+  //   outputScriptVariableName: {
+  //        outputDataTableId: zzz, outputDataArray: [ {field1: val1, field2: val2, ...}, ... ]
+  //   },
+  //
+  //   ...
+  //
+  // }
+  var outputData = {};
 
   const handleRecordsUpdated = (models, keys) => {
     setLiveScriptNeedsRerun(true);
@@ -1092,6 +1123,18 @@ function Chrysopelea({setIsShowingSettings}) {
           : null;
 
           inputDataRecords[scriptInputVariableName] = thisVariableDataRecords;
+        }
+      });
+    }
+
+    if( isScriptOutputVariablesEnabled ) {
+      // Create outputData keys if they don't already exist.
+      scriptOutputVariableNamesRecords.forEach(scriptOutputVariableNamesRecord => {
+        var scriptOutputVariableName = scriptOutputVariableNamesRecord.getCellValueAsString(scriptOutputVariableNamesFieldId);
+        if ( !(scriptOutputVariableName in outputData)) {
+          outputData[scriptOutputVariableName] = {};
+          outputData[scriptOutputVariableName].outputDataTableId = globalConfig.get(["scriptOutputVariableDataTableId", scriptOutputVariableName]);
+          outputData[scriptOutputVariableName].outputDataArray = new Array();
         }
       });
     }
@@ -1349,6 +1392,7 @@ function Chrysopelea({setIsShowingSettings}) {
       { isScriptOutputVariablesEnabled
         ?
           <DataOutputsSummary
+            outputData={outputData}
             isShowDataOutputsSummaryFieldsEnabled={isShowDataOutputsSummaryFieldsEnabled}
             setShowDataOutputsSummaryFieldsEnabled={(newValue) =>
               globalConfig.setAsync('isShowDataOutputsSummaryFieldsEnabled', newValue)
@@ -1516,7 +1560,7 @@ function DataInputsFieldInfo({variableName, dataRecord}) {
   )
 }
 
-function DataOutputsSummary({
+function DataOutputsSummary({outputData,
   isShowDataOutputsSummaryFieldsEnabled,
   setShowDataOutputsSummaryFieldsEnabled}) {
   return (
@@ -1544,18 +1588,18 @@ function DataOutputsSummary({
         </tr>
       </thead>
       <tbody>
-        { /*
-          Object.keys(dataRecords).map(variableName => {
+        {
+          Object.keys(outputData).map(variableName => {
             return (
               <tr key={variableName}>
                 <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{variableName}</td>
                 <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>chrysopelea.{variableName}</td>
-                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{dataRecords[variableName].length}</td>
+                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{outputData[variableName].outputDataArray.length}</td>
                 <td style={{borderBottom: '1px solid #75715E', width: '60%'}}>
                   { isShowDataOutputsSummaryFieldsEnabled ?
                     <DataOutputsFieldInfo
                       variableName={variableName}
-                      dataRecord={dataRecords[variableName]}
+                      data={outputData[variableName]}
                     />
                     :
                     ""
@@ -1564,13 +1608,45 @@ function DataOutputsSummary({
               </tr>
             );
           })
-          */
         }
       </tbody>
     </table>
   );
 }
 
+function DataOutputsFieldInfo({variableName, data}) {
+  const base = useBase();
+
+  var dataTable =
+      data.outputDataTableId !== undefined
+    ? base.getTableByIdIfExists(data.outputDataTableId)
+    : null;
+
+  return (
+    <table style={{backgroundColor: '#272822', color: '#F8F8F2', width: '100%'}}>
+      <thead>
+        <tr>
+          <th style={{textAlign: 'left'}}>Field Name</th>
+          <th style={{textAlign: 'left'}}>Access in script using e.g...</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          // all_the_{fieldName.replace(/\s/g,'_')} = [row.getCellValue("{fieldName}") for row in chrysopelea.{variableName}]
+          dataTable.fields.map(field => {            
+            var fieldName = field.name;
+            return (
+              <tr key={fieldName}>
+                <td style={{wordBreak: 'break-all', width: '30%'}}>{fieldName}</td>
+                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>todo</td>
+              </tr>
+            )
+          })
+        }
+      </tbody>
+    </table>
+  )
+}
 
 function Plots({plotData}) {
   return (
