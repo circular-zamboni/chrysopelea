@@ -890,36 +890,39 @@ function Chrysopelea() {
   var requiredSettingsAreSet = checkRequiredSettingsAreSet();
 
   if( requiredSettingsAreSet ) {
-    scriptInputVariableNamesRecords.forEach(scriptInputVariableNameRecord => {
 
-      var scriptInputVariableName = scriptInputVariableNameRecord.getCellValueAsString(scriptInputVariableNamesFieldId);
+    if( isScriptInputVariablesEnabled ) {
+      scriptInputVariableNamesRecords.forEach(scriptInputVariableNameRecord => {
 
-      if( scriptInputVariableName != "" ) {
+        var scriptInputVariableName = scriptInputVariableNameRecord.getCellValueAsString(scriptInputVariableNamesFieldId);
 
-        var dataTableId = globalConfig.get(["scriptInputVariableDataTableId", scriptInputVariableName]);
-        var dataViewId = globalConfig.get(["scriptInputVariableDataViewId", scriptInputVariableName]);
-        var dataTable =
-            dataTableId !== undefined
-          ? base.getTableByIdIfExists(dataTableId)
+        if( scriptInputVariableName != "" ) {
+
+          var dataTableId = globalConfig.get(["scriptInputVariableDataTableId", scriptInputVariableName]);
+          var dataViewId = globalConfig.get(["scriptInputVariableDataViewId", scriptInputVariableName]);
+          var dataTable =
+              dataTableId !== undefined
+            ? base.getTableByIdIfExists(dataTableId)
+            : null;
+          var dataView =
+              dataTable !== null
+            ? dataTable.getViewByIdIfExists(dataViewId)
+            : null;
+
+          const thisVariableDataQueryResult =
+              dataView !== null
+            ? dataView.selectRecords()
+            : null;
+
+          const thisVariableDataRecords =
+            thisVariableDataQueryResult != null
+          ? useRecordsWithUseWatchableCallback(thisVariableDataQueryResult, handleRecordsUpdated)
           : null;
-        var dataView =
-            dataTable !== null
-          ? dataTable.getViewByIdIfExists(dataViewId)
-          : null;
 
-        const thisVariableDataQueryResult =
-            dataView !== null
-          ? dataView.selectRecords()
-          : null;
-
-        const thisVariableDataRecords =
-          thisVariableDataQueryResult != null
-        ? useRecordsWithUseWatchableCallback(thisVariableDataQueryResult, handleRecordsUpdated)
-        : null;
-
-        dataRecords[scriptInputVariableName] = thisVariableDataRecords;
-      }
-    });
+          dataRecords[scriptInputVariableName] = thisVariableDataRecords;
+        }
+      });      
+    }
   }
 
   const handleSelectScriptSourceRecord = async () => {
