@@ -17,7 +17,7 @@ Python in Airtable.
 - [ ] configure script output images to attachments field(s)
 - [ ] save script output plots to attachment field(s)
 - [ ] debugging capability (?)
-- [ ] save main display switch states to config, (including "show fields")
+- [x] save main display switch states to config, (including "show fields")
 - [x] add switch in settings to hide main display controls
 - [ ] configure script input from github path (?)
 - [x] disable running until all of pyodide including libs are loaded
