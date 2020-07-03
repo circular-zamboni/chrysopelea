@@ -1028,7 +1028,8 @@ function Chrysopelea({setIsShowingSettings}) {
 
   const scriptInputVariableNamesRecords = useRecords(scriptInputVariableNamesQueryResult);
 
-  var dataRecords = {};
+  // Dictionary keyed on scriptInputVariableName.  Value is query result with data for that variable.
+  var inputDataRecords = {};
 
   const handleRecordsUpdated = (models, keys) => {
     setLiveScriptNeedsRerun(true);
@@ -1090,7 +1091,7 @@ function Chrysopelea({setIsShowingSettings}) {
           ? useRecordsWithUseWatchableCallback(thisVariableDataQueryResult, handleRecordsUpdated)
           : null;
 
-          dataRecords[scriptInputVariableName] = thisVariableDataRecords;
+          inputDataRecords[scriptInputVariableName] = thisVariableDataRecords;
         }
       });
     }
@@ -1146,7 +1147,7 @@ function Chrysopelea({setIsShowingSettings}) {
 
   const handleRunScript = event => {
     runPythonAsync(isUserCodeDirty ? userCode : selectedScriptSourceValue,
-      dataRecords,
+      inputDataRecords,
       handlePythonResult,
       handlePythonError,
       handlePlotsUpdated,
@@ -1326,7 +1327,7 @@ function Chrysopelea({setIsShowingSettings}) {
       { isScriptInputVariablesEnabled
         ?
           <DataInputsSummary
-            dataRecords={dataRecords}
+            inputDataRecords={inputDataRecords}
             isShowDataInputsSummaryFieldsEnabled={isShowDataInputsSummaryFieldsEnabled}
             setShowDataInputsSummaryFieldsEnabled={(newValue) =>
               globalConfig.setAsync('isShowDataInputsSummaryFieldsEnabled', newValue)
@@ -1428,7 +1429,7 @@ function Chrysopelea({setIsShowingSettings}) {
   */
 }
 
-function DataInputsSummary({dataRecords,
+function DataInputsSummary({inputDataRecords,
   isShowDataInputsSummaryFieldsEnabled,
   setShowDataInputsSummaryFieldsEnabled}) {
   return (
@@ -1457,17 +1458,17 @@ function DataInputsSummary({dataRecords,
       </thead>
       <tbody>
         {
-          Object.keys(dataRecords).map(variableName => {
+          Object.keys(inputDataRecords).map(variableName => {
             return (
               <tr key={variableName}>
                 <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{variableName}</td>
                 <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>chrysopelea.{variableName}</td>
-                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{dataRecords[variableName].length}</td>
+                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{inputDataRecords[variableName].length}</td>
                 <td style={{borderBottom: '1px solid #75715E', width: '60%'}}>
                   { isShowDataInputsSummaryFieldsEnabled ?
                     <DataInputsFieldInfo
                       variableName={variableName}
-                      dataRecord={dataRecords[variableName]}
+                      dataRecord={inputDataRecords[variableName]}
                     />
                     :
                     ""
@@ -2064,14 +2065,14 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   }
 });
 
-function runPython(userCode, dataRecords, onResult, onError, onPlots) {
+function runPython(userCode, inputDataRecords, onResult, onError, onPlots) {
     // This object will be accessible in python using 'from js import airtable'.
     window.chrysopelea = {};
     window.chrysopelea.inputs  = {};
     window.chrysopelea.outputs = {};
     window.chrysopelea.plots   = {};
-    Object.keys(dataRecords).forEach(key => {
-      window.chrysopelea.inputs[key] = dataRecords[key];
+    Object.keys(inputDataRecords).forEach(key => {
+      window.chrysopelea.inputs[key] = inputDataRecords[key];
     });
     try {
       const codeToRun = addCodeMagic(userCode);
@@ -2106,7 +2107,7 @@ chrysopelea.saveAirplot = types.MethodType(saveAirplot, chrysopelea)
 }
 
 function runPythonAsync(code,
-  dataRecords,
+  inputDataRecords,
   onResult,
   onError,
   onPlots,
@@ -2117,7 +2118,7 @@ function runPythonAsync(code,
 
   setTimeout( () => {
     runPython(code,
-      dataRecords,
+      inputDataRecords,
       (result) => {
         onAfterDone();
         onResult(result);

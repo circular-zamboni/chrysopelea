@@ -25,3 +25,4 @@ Python in Airtable.
 - [ ] react properly when script table rows added/removed
 - [ ] make chrysopelea object be a proper import in python land
 - [ ] replace getConfigPathElse 'else' values with constants.
+- [ ] better thread handling when running script (?)
