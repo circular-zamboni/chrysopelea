@@ -484,35 +484,35 @@ function SettingsComponent() {
 
   const isBlockControlsEnabled = getConfigPathElse(globalConfig, "isBlockControlsEnabled", true);
 
-  const scriptVariableNamesTableId
-    = globalConfig.get("scriptVariableNamesTableId");
+  const scriptInputVariableNamesTableId
+    = globalConfig.get("scriptInputVariableNamesTableId");
 
-  const scriptVariableNamesViewId
-    = globalConfig.get("scriptVariableNamesViewId");
+  const scriptInputVariableNamesViewId
+    = globalConfig.get("scriptInputVariableNamesViewId");
 
-  const scriptVariableNamesFieldId
-    = globalConfig.get("scriptVariableNamesFieldId");
+  const scriptInputVariableNamesFieldId
+    = globalConfig.get("scriptInputVariableNamesFieldId");
 
   const scriptSourceCodeTableId
     = globalConfig.get("scriptSourceCodeTableId");
 
-  const scriptVariableNamesTable
-    = base.getTableByIdIfExists(scriptVariableNamesTableId);
+  const scriptInputVariableNamesTable
+    = base.getTableByIdIfExists(scriptInputVariableNamesTableId);
 
-  const scriptVariableNamesView
-    = scriptVariableNamesTable
-      ? scriptVariableNamesTable.getViewByIdIfExists(scriptVariableNamesViewId)
+  const scriptInputVariableNamesView
+    = scriptInputVariableNamesTable
+      ? scriptInputVariableNamesTable.getViewByIdIfExists(scriptInputVariableNamesViewId)
       : null;
 
-  const scriptVariableNamesField
-    = scriptVariableNamesTable
-      ? scriptVariableNamesTable.getFieldByIdIfExists(scriptVariableNamesFieldId)
+  const scriptInputVariableNamesField
+    = scriptInputVariableNamesTable
+      ? scriptInputVariableNamesTable.getFieldByIdIfExists(scriptInputVariableNamesFieldId)
       : null;
 
   const scriptSourceCodeTable
     = base.getTableByIdIfExists(scriptSourceCodeTableId);
 
-  const scriptVariableRecords = useRecords(scriptVariableNamesView);
+  const scriptInputVariableRecords = useRecords(scriptInputVariableNamesView);
 
   return (
     <Box
@@ -600,51 +600,51 @@ function SettingsComponent() {
         backgroundColor="lightGray1"
       >
         <FormField
-          label="Script Variable Names List Table"
+          label="Script Input Variable Names List Table"
         >
           <Tooltip
-            content="The table that contains your list of input script variable names."
+            content="The table that contains your list of script input variable names."
             placementX={Tooltip.placements.CENTER}
             placementY={Tooltip.placements.BOTTOM}
           >
             <TablePickerSynced
-              globalConfigKey="scriptVariableNamesTableId" />
+              globalConfigKey="scriptInputVariableNamesTableId" />
           </Tooltip>
         </FormField>
-        { scriptVariableNamesTable && (
+        { scriptInputVariableNamesTable && (
         <FormField
-          label="Script Variable Names List View"
+          label="Script Input Variable Names List View"
         >
           <Tooltip
-            content="The view that contains your list of input script variable names."
+            content="The view that contains your list of script input variable names."
             placementX={Tooltip.placements.CENTER}
             placementY={Tooltip.placements.BOTTOM}
           >
             <ViewPickerSynced
-              table={scriptVariableNamesTable}
-              globalConfigKey="scriptVariableNamesViewId" />
+              table={scriptInputVariableNamesTable}
+              globalConfigKey="scriptInputVariableNamesViewId" />
           </Tooltip>
         </FormField>
         )}
-        { scriptVariableNamesTable && (
+        { scriptInputVariableNamesTable && (
         <FormField
-          label="Script Variable Names List Field"
+          label="Script Input Variable Names List Field"
         >
           <Tooltip
-            content="The field that defines your input script variable names."
+            content="The field that defines your script input variable names."
             placementX={Tooltip.placements.CENTER}
             placementY={Tooltip.placements.BOTTOM}
           >
             <FieldPickerSynced
-              table={scriptVariableNamesTable}
-              globalConfigKey="scriptVariableNamesFieldId" />
+              table={scriptInputVariableNamesTable}
+              globalConfigKey="scriptInputVariableNamesFieldId" />
           </Tooltip>
         </FormField>
         )}
       </Box>
     </FormField>
 
-    {scriptVariableRecords && scriptVariableNamesField && (
+    {scriptInputVariableRecords && scriptInputVariableNamesField && (
       <FormField
         label="Configure Script Input Variable Data"
         description="For each of the script input variables that you've defined, tell this block what Airtable table/view to read from to populate the variable."
@@ -656,13 +656,13 @@ function SettingsComponent() {
           border="thick"
           backgroundColor="lightGray1"
         >
-          {scriptVariableRecords
-            .filter(scriptVariableRecord =>
-              scriptVariableRecord.getCellValueAsString(scriptVariableNamesField) != '')
-            .map(scriptVariableRecord => {
+          {scriptInputVariableRecords
+            .filter(scriptInputVariableRecord =>
+              scriptInputVariableRecord.getCellValueAsString(scriptInputVariableNamesField) != '')
+            .map(scriptInputVariableRecord => {
             return <ConfigureScriptVariable
-              scriptVariableRecord={scriptVariableRecord}
-              scriptVariableNamesField={scriptVariableNamesField}
+              scriptVariableRecord={scriptInputVariableRecord}
+              scriptVariableNamesField={scriptInputVariableNamesField}
             />;
           })}
         </Box>
@@ -682,7 +682,7 @@ function ConfigureScriptVariable({scriptVariableRecord,
     = scriptVariableRecord.getCellValueAsString(scriptVariableNamesField);
 
   const scriptVariableDataTableId
-    = globalConfig.get(["scriptVariableDataTableId", scriptVariableName]);
+    = globalConfig.get(["scriptInputVariableDataTableId", scriptVariableName]);
 
   const scriptVariableDataTable
     = base.getTableByIdIfExists(scriptVariableDataTableId);
@@ -706,7 +706,7 @@ function ConfigureScriptVariable({scriptVariableRecord,
             placementY={Tooltip.placements.BOTTOM}
           >
             <TablePickerSynced
-              globalConfigKey={["scriptVariableDataTableId", scriptVariableName]}
+              globalConfigKey={["scriptInputVariableDataTableId", scriptVariableName]}
             />
           </Tooltip>
         </FormField>
@@ -721,7 +721,7 @@ function ConfigureScriptVariable({scriptVariableRecord,
             >
               <ViewPickerSynced
                 table={scriptVariableDataTable}
-                globalConfigKey={["scriptVariableDataViewId", scriptVariableName]}
+                globalConfigKey={["scriptInputVariableDataViewId", scriptVariableName]}
               />
             </Tooltip>
           </FormField>
@@ -814,21 +814,21 @@ function Chrysopelea() {
   const [userCode, setUserCode] = useState(selectedScriptSourceValue !== undefined ? selectedScriptSourceValue : "");
 
   // Loading script variable names.
-  const scriptVariableNamesTableId = globalConfig.get("scriptVariableNamesTableId");
-  const scriptVariableNamesViewId = globalConfig.get("scriptVariableNamesViewId");
-  const scriptVariableNamesFieldId = globalConfig.get("scriptVariableNamesFieldId");
+  const scriptInputVariableNamesTableId = globalConfig.get("scriptInputVariableNamesTableId");
+  const scriptInputVariableNamesViewId = globalConfig.get("scriptInputVariableNamesViewId");
+  const scriptInputVariableNamesFieldId = globalConfig.get("scriptInputVariableNamesFieldId");
 
-  const scriptVariableNamesTable = base.getTableByIdIfExists(scriptVariableNamesTableId);
-  const scriptVariableNamesView =
-      (scriptVariableNamesTable && (scriptVariableNamesViewId !== undefined))
-    ? scriptVariableNamesTable.getViewByIdIfExists(scriptVariableNamesViewId)
+  const scriptInputVariableNamesTable = base.getTableByIdIfExists(scriptInputVariableNamesTableId);
+  const scriptInputVariableNamesView =
+      (scriptInputVariableNamesTable && (scriptInputVariableNamesViewId !== undefined))
+    ? scriptInputVariableNamesTable.getViewByIdIfExists(scriptInputVariableNamesViewId)
     : null;
-  const scriptVariableNamesQueryResult =
-      scriptVariableNamesView
-    ? scriptVariableNamesView.selectRecords()
+  const scriptInputVariableNamesQueryResult =
+      scriptInputVariableNamesView
+    ? scriptInputVariableNamesView.selectRecords()
     : null;
 
-  const scriptVariableNamesRecords = useRecords(scriptVariableNamesQueryResult);
+  const scriptInputVariableNamesRecords = useRecords(scriptInputVariableNamesQueryResult);
 
   var dataRecords = {};
 
@@ -863,14 +863,14 @@ function Chrysopelea() {
   var requiredSettingsAreSet = checkRequiredSettingsAreSet();
 
   if( requiredSettingsAreSet ) {
-    scriptVariableNamesRecords.forEach(scriptVariableNameRecord => {
+    scriptInputVariableNamesRecords.forEach(scriptInputVariableNameRecord => {
 
-      var scriptVariableName = scriptVariableNameRecord.getCellValueAsString(scriptVariableNamesFieldId);
+      var scriptInputVariableName = scriptInputVariableNameRecord.getCellValueAsString(scriptInputVariableNamesFieldId);
 
-      if( scriptVariableName != "" ) {
+      if( scriptInputVariableName != "" ) {
 
-        var dataTableId = globalConfig.get(["scriptVariableDataTableId", scriptVariableName]);
-        var dataViewId = globalConfig.get(["scriptVariableDataViewId", scriptVariableName]);
+        var dataTableId = globalConfig.get(["scriptInputVariableDataTableId", scriptInputVariableName]);
+        var dataViewId = globalConfig.get(["scriptInputVariableDataViewId", scriptInputVariableName]);
         var dataTable =
             dataTableId !== undefined
           ? base.getTableByIdIfExists(dataTableId)
@@ -890,7 +890,7 @@ function Chrysopelea() {
         ? useRecordsWithUseWatchableCallback(thisVariableDataQueryResult, handleRecordsUpdated)
         : null;
 
-        dataRecords[scriptVariableName] = thisVariableDataRecords;
+        dataRecords[scriptInputVariableName] = thisVariableDataRecords;
       }
     });
   }
@@ -1857,28 +1857,28 @@ function checkRequiredSettingsAreSet() {
   var settings1 = (
         globalConfig.get('scriptSourceCodeTableId') !== undefined
     &&  globalConfig.get('scriptSourceCodeFieldId') !== undefined
-    &&  globalConfig.get('scriptVariableNamesTableId') !== undefined
-    &&  globalConfig.get('scriptVariableNamesViewId') !== undefined
-    &&  globalConfig.get('scriptVariableNamesFieldId') !== undefined
+    &&  globalConfig.get('scriptInputVariableNamesTableId') !== undefined
+    &&  globalConfig.get('scriptInputVariableNamesViewId') !== undefined
+    &&  globalConfig.get('scriptInputVariableNamesFieldId') !== undefined
     );
 
-    const scriptVariableNamesTableId = globalConfig.get("scriptVariableNamesTableId");
-    const scriptVariableNamesViewId = globalConfig.get("scriptVariableNamesViewId");
-    const scriptVariableNamesFieldId = globalConfig.get("scriptVariableNamesFieldId");
+    const scriptInputVariableNamesTableId = globalConfig.get("scriptInputVariableNamesTableId");
+    const scriptInputVariableNamesViewId = globalConfig.get("scriptInputVariableNamesViewId");
+    const scriptInputVariableNamesFieldId = globalConfig.get("scriptInputVariableNamesFieldId");
 
-    const scriptVariableNamesTable = base.getTableByIdIfExists(scriptVariableNamesTableId);
+    const scriptInputVariableNamesTable = base.getTableByIdIfExists(scriptInputVariableNamesTableId);
 
-    const scriptVariableNamesView =
-        (scriptVariableNamesTable && (scriptVariableNamesViewId !== undefined))
-      ? scriptVariableNamesTable.getViewByIdIfExists(scriptVariableNamesViewId)
+    const scriptInputVariableNamesView =
+        (scriptInputVariableNamesTable && (scriptInputVariableNamesViewId !== undefined))
+      ? scriptInputVariableNamesTable.getViewByIdIfExists(scriptInputVariableNamesViewId)
       : null;
 
-    const scriptVariableNamesQueryResult =
-        scriptVariableNamesView
-      ? scriptVariableNamesView.selectRecords()
+    const scriptInputVariableNamesQueryResult =
+        scriptInputVariableNamesView
+      ? scriptInputVariableNamesView.selectRecords()
       : null;
 
-    const scriptVariableNamesRecords = useRecords(scriptVariableNamesQueryResult);
+    const scriptInputVariableNamesRecords = useRecords(scriptInputVariableNamesQueryResult);
 
     if( !settings1 ) {
       return false;
@@ -1886,13 +1886,13 @@ function checkRequiredSettingsAreSet() {
 
     // Checking that each of the script variables is configured with a data source (table, view).
     var result = true;
-    scriptVariableNamesRecords.forEach(record => {
-      var variableName = record.getCellValueAsString(scriptVariableNamesFieldId);
+    scriptInputVariableNamesRecords.forEach(record => {
+      var variableName = record.getCellValueAsString(scriptInputVariableNamesFieldId);
       if (variableName != "") {
-        if ( globalConfig.get(["scriptVariableDataTableId",variableName]) === undefined ) {
+        if ( globalConfig.get(["scriptInputVariableDataTableId",variableName]) === undefined ) {
           result = false;
         }
-        if ( globalConfig.get(["scriptVariableDataViewId", variableName]) === undefined ) {
+        if ( globalConfig.get(["scriptInputVariableDataViewId", variableName]) === undefined ) {
           result = false;
         }
       }
