@@ -484,6 +484,8 @@ function SettingsComponent() {
 
   const isBlockControlsEnabled = getConfigPathElse(globalConfig, "isBlockControlsEnabled", true);
 
+  const isScriptInputVariablesEnabled = getConfigPathElse(globalConfig, "isScriptInputVariablesEnabled", true);
+
   const scriptInputVariableNamesTableId
     = globalConfig.get("scriptInputVariableNamesTableId");
 
@@ -515,12 +517,12 @@ function SettingsComponent() {
   const scriptInputVariableRecords = useRecords(scriptInputVariableNamesView);
 
   return (
-    <Box
-    display="flex"
-    flexDirection="column"
-    padding={2}
-    border="none"
-    >
+  <Box
+  display="flex"
+  flexDirection="column"
+  padding={2}
+  border="none"
+  >
 
     <FormField
       label="Configure Display"
@@ -589,65 +591,30 @@ function SettingsComponent() {
     </FormField>
 
     <FormField
-      label="Configure Script Input Variable Names"
-      description="Tell this block what are all the python script variables that you want to define and populate with Airtable data."
+      label="Enable Airtable Data Inputs and Outputs"
     >
-      <Box
-        display="flex"
-        flexDirection="column"
-        padding={2}
-        border="thick"
-        backgroundColor="lightGray1"
+      <Tooltip
+        content="Enable this if you want to bring data from Airtable into your script."
+        placementX={Tooltip.placements.CENTER}
+        placementY={Tooltip.placements.BOTTOM}
       >
-        <FormField
-          label="Script Input Variable Names List Table"
-        >
-          <Tooltip
-            content="The table that contains your list of script input variable names."
-            placementX={Tooltip.placements.CENTER}
-            placementY={Tooltip.placements.BOTTOM}
-          >
-            <TablePickerSynced
-              globalConfigKey="scriptInputVariableNamesTableId" />
-          </Tooltip>
-        </FormField>
-        { scriptInputVariableNamesTable && (
-        <FormField
-          label="Script Input Variable Names List View"
-        >
-          <Tooltip
-            content="The view that contains your list of script input variable names."
-            placementX={Tooltip.placements.CENTER}
-            placementY={Tooltip.placements.BOTTOM}
-          >
-            <ViewPickerSynced
-              table={scriptInputVariableNamesTable}
-              globalConfigKey="scriptInputVariableNamesViewId" />
-          </Tooltip>
-        </FormField>
-        )}
-        { scriptInputVariableNamesTable && (
-        <FormField
-          label="Script Input Variable Names List Field"
-        >
-          <Tooltip
-            content="The field that defines your script input variable names."
-            placementX={Tooltip.placements.CENTER}
-            placementY={Tooltip.placements.BOTTOM}
-          >
-            <FieldPickerSynced
-              table={scriptInputVariableNamesTable}
-              globalConfigKey="scriptInputVariableNamesFieldId" />
-          </Tooltip>
-        </FormField>
-        )}
-      </Box>
+        <Switch
+          value={isScriptInputVariablesEnabled}
+          onChange={newValue => globalConfig.setAsync('isScriptInputVariablesEnabled', newValue)}
+          label="Enable Script Input Variables"
+        />
+      </Tooltip>
     </FormField>
 
-    {scriptInputVariableRecords && scriptInputVariableNamesField && (
+    <Box
+      display={isScriptInputVariablesEnabled ? "flex" : "none"}
+      flexDirection="column"
+      padding={2}
+      border="thick"
+    >
       <FormField
-        label="Configure Script Input Variable Data"
-        description="For each of the script input variables that you've defined, tell this block what Airtable table/view to read from to populate the variable."
+        label="Configure Script Input Variable Names"
+        description="Tell this block what are all the python script variables that you want to define and populate with Airtable data."
       >
         <Box
           display="flex"
@@ -656,20 +623,78 @@ function SettingsComponent() {
           border="thick"
           backgroundColor="lightGray1"
         >
-          {scriptInputVariableRecords
-            .filter(scriptInputVariableRecord =>
-              scriptInputVariableRecord.getCellValueAsString(scriptInputVariableNamesField) != '')
-            .map(scriptInputVariableRecord => {
-            return <ConfigureScriptVariable
-              scriptVariableRecord={scriptInputVariableRecord}
-              scriptVariableNamesField={scriptInputVariableNamesField}
-            />;
-          })}
+          <FormField
+            label="Script Input Variable Names List Table"
+          >
+            <Tooltip
+              content="The table that contains your list of script input variable names."
+              placementX={Tooltip.placements.CENTER}
+              placementY={Tooltip.placements.BOTTOM}
+            >
+              <TablePickerSynced
+                globalConfigKey="scriptInputVariableNamesTableId" />
+            </Tooltip>
+          </FormField>
+          { scriptInputVariableNamesTable && (
+          <FormField
+            label="Script Input Variable Names List View"
+          >
+            <Tooltip
+              content="The view that contains your list of script input variable names."
+              placementX={Tooltip.placements.CENTER}
+              placementY={Tooltip.placements.BOTTOM}
+            >
+              <ViewPickerSynced
+                table={scriptInputVariableNamesTable}
+                globalConfigKey="scriptInputVariableNamesViewId" />
+            </Tooltip>
+          </FormField>
+          )}
+          { scriptInputVariableNamesTable && (
+          <FormField
+            label="Script Input Variable Names List Field"
+          >
+            <Tooltip
+              content="The field that defines your script input variable names."
+              placementX={Tooltip.placements.CENTER}
+              placementY={Tooltip.placements.BOTTOM}
+            >
+              <FieldPickerSynced
+                table={scriptInputVariableNamesTable}
+                globalConfigKey="scriptInputVariableNamesFieldId" />
+            </Tooltip>
+          </FormField>
+          )}
         </Box>
       </FormField>
-    )}
 
+      {scriptInputVariableRecords && scriptInputVariableNamesField && (
+        <FormField
+          label="Configure Script Input Variable Data"
+          description="For each of the script input variables that you've defined, tell this block what Airtable table/view to read from to populate the variable."
+        >
+          <Box
+            display="flex"
+            flexDirection="column"
+            padding={2}
+            border="thick"
+            backgroundColor="lightGray1"
+          >
+            {scriptInputVariableRecords
+              .filter(scriptInputVariableRecord =>
+                scriptInputVariableRecord.getCellValueAsString(scriptInputVariableNamesField) != '')
+              .map(scriptInputVariableRecord => {
+              return <ConfigureScriptVariable
+                scriptVariableRecord={scriptInputVariableRecord}
+                scriptVariableNamesField={scriptInputVariableNamesField}
+              />;
+            })}
+          </Box>
+        </FormField>
+      )}
     </Box>
+
+  </Box>
   );
 }
 
@@ -766,6 +791,7 @@ function Chrysopelea() {
 
   const [isPyodideInitialized, setIsPyodideInitialized] = useState(false);
   const [pythonStatusMsg, setPythonStatusMsg] = useState("Idle");
+  const [isHelpMode, setIsHelpMode] = useState(false);
 
   const isShowScriptEnabled                   = getConfigPathElse(globalConfig, 'isShowScriptEnabled', true);
   const isShowDataInputsSummaryEnabled        = getConfigPathElse(globalConfig, 'isShowDataInputsSummaryEnabled', true);
@@ -776,6 +802,7 @@ function Chrysopelea() {
   const isShowPlotsEnabled                    = getConfigPathElse(globalConfig, 'isShowPlotsEnabled', true);
   const isRunAutomaticallyWhenInputsUpdated   = getConfigPathElse(globalConfig, 'isRunAutomaticallyWhenInputsUpdated', false);
   const isBlockControlsEnabled                = getConfigPathElse(globalConfig, 'isBlockControlsEnabled', true);
+  const isScriptInputVariablesEnabled         = getConfigPathElse(globalConfig, "isScriptInputVariablesEnabled", true);
 
   const [isThereAreNoScriptsDialogOpen, setThereAreNoScriptsDialogOpen] = useState(false);
 
@@ -954,6 +981,14 @@ function Chrysopelea() {
     );
   }
 
+  if( isHelpMode ) {
+    // return <Help/>
+  }
+
+  if( !requiredSettingsAreSet ) {
+    return <SettingsComponent />;
+  }
+
   return (
   <Box
     display="flex"
@@ -1113,11 +1148,18 @@ function Chrysopelea() {
       border="default"
     >
       <Heading>Data Inputs Summary</Heading>
-      <DataInputsSummary
-        dataRecords={dataRecords}
-        isShowDataInputsSummaryFieldsEnabled={isShowDataInputsSummaryFieldsEnabled}
-        setShowDataInputsSummaryFieldsEnabled={(newValue) => globalConfig.setAsync('isShowDataInputsSummaryFieldsEnabled', newValue)}
-      />
+      { isScriptInputVariablesEnabled
+        ?
+          <DataInputsSummary
+            dataRecords={dataRecords}
+            isShowDataInputsSummaryFieldsEnabled={isShowDataInputsSummaryFieldsEnabled}
+            setShowDataInputsSummaryFieldsEnabled={(newValue) =>
+              globalConfig.setAsync('isShowDataInputsSummaryFieldsEnabled', newValue)
+            }
+          />
+        :
+          <Text>Data Inputs Are Disabled In Settings</Text>
+      }
     </Box>
 
     <Box
@@ -1853,14 +1895,19 @@ function checkRequiredSettingsAreSet() {
   const globalConfig = useGlobalConfig();
   const base = useBase();
 
+  const isScriptInputVariablesEnabled = getConfigPathElse(globalConfig, "isScriptInputVariablesEnabled", true);
+
   // Checking on core settings for script source code and script variable names.
   var settings1 = (
         globalConfig.get('scriptSourceCodeTableId') !== undefined
     &&  globalConfig.get('scriptSourceCodeFieldId') !== undefined
-    &&  globalConfig.get('scriptInputVariableNamesTableId') !== undefined
+  );
+
+  var settings2 = (
+        globalConfig.get('scriptInputVariableNamesTableId') !== undefined
     &&  globalConfig.get('scriptInputVariableNamesViewId') !== undefined
     &&  globalConfig.get('scriptInputVariableNamesFieldId') !== undefined
-    );
+  );
 
     const scriptInputVariableNamesTableId = globalConfig.get("scriptInputVariableNamesTableId");
     const scriptInputVariableNamesViewId = globalConfig.get("scriptInputVariableNamesViewId");
@@ -1881,6 +1928,14 @@ function checkRequiredSettingsAreSet() {
     const scriptInputVariableNamesRecords = useRecords(scriptInputVariableNamesQueryResult);
 
     if( !settings1 ) {
+      return false;
+    }
+
+    if( !isScriptInputVariablesEnabled ) {
+      return true;
+    }
+
+    if( !settings2 ) {
       return false;
     }
 
