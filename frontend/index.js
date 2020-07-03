@@ -1442,7 +1442,7 @@ function DataInputsSummary({inputDataRecords,
         <tr>
           <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>Variable</th>
           <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>Access in script using...</th>
-          <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>Number of records</th>
+          <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>Number of records to be read into script.</th>
           <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>
             <Switch
               flex="1"
@@ -1529,6 +1529,7 @@ function DataOutputsSummary({
         <tr>
           <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>Variable</th>
           <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>Access in script using...</th>
+          <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>Number of records written out from script.</th>
           <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>
             <Switch
               flex="1"
