@@ -1191,6 +1191,7 @@ function Chrysopelea({setIsShowingSettings}) {
   const handleRunScript = event => {
     runPythonAsync(isUserCodeDirty ? userCode : selectedScriptSourceValue,
       inputDataRecords,
+      outputData,
       handlePythonResult,
       handlePythonError,
       handlePlotsUpdated,
@@ -1506,7 +1507,7 @@ function DataInputsSummary({inputDataRecords,
             return (
               <tr key={variableName}>
                 <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{variableName}</td>
-                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>chrysopelea.{variableName}</td>
+                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>chrysopelea.inputs.{variableName}</td>
                 <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{inputDataRecords[variableName].length}</td>
                 <td style={{borderBottom: '1px solid #75715E', width: '60%'}}>
                   { isShowDataInputsSummaryFieldsEnabled ?
@@ -1593,7 +1594,7 @@ function DataOutputsSummary({outputData,
             return (
               <tr key={variableName}>
                 <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{variableName}</td>
-                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>chrysopelea.{variableName}</td>
+                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>chrysopelea.outputs.{variableName}</td>
                 <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{outputData[variableName].outputDataArray.length}</td>
                 <td style={{borderBottom: '1px solid #75715E', width: '60%'}}>
                   { isShowDataOutputsSummaryFieldsEnabled ?
@@ -1635,10 +1636,11 @@ function DataOutputsFieldInfo({variableName, data}) {
           // all_the_{fieldName.replace(/\s/g,'_')} = [row.getCellValue("{fieldName}") for row in chrysopelea.{variableName}]
           dataTable.fields.map(field => {
             var fieldName = field.name;
+            var strippedFieldName = fieldName.replace(/\s/g,'_');
             return (
               <tr key={fieldName}>
                 <td style={{wordBreak: 'break-all', width: '30%'}}>{fieldName}</td>
-                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>todo</td>
+                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>chrysopelea.outputs.{strippedFieldName} TODO HERE</td>
               </tr>
             )
           })
@@ -2142,14 +2144,17 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   }
 });
 
-function runPython(userCode, inputDataRecords, onResult, onError, onPlots) {
+function runPython(userCode, inputDataRecords, outputData, onResult, onError, onPlots) {
     // This object will be accessible in python using 'from js import airtable'.
     window.chrysopelea = {};
     window.chrysopelea.inputs  = {};
     window.chrysopelea.outputs = {};
     window.chrysopelea.plots   = {};
-    Object.keys(inputDataRecords).map(key => {
-      window.chrysopelea.inputs[key] = inputDataRecords[key];
+    Object.keys(inputDataRecords).map(inputVariableName => {
+      window.chrysopelea.inputs[inputVariableName] = inputDataRecords[inputVariableName];
+    });
+    Object.keys(outputData).map(outputVariableName => {
+      window.chrysopelea.outputs[outputVariableName] = new Array();
     });
     try {
       const codeToRun = addCodeMagic(userCode);
@@ -2185,6 +2190,7 @@ chrysopelea.saveAirplot = types.MethodType(saveAirplot, chrysopelea)
 
 function runPythonAsync(code,
   inputDataRecords,
+  outputData,
   onResult,
   onError,
   onPlots,
@@ -2196,6 +2202,7 @@ function runPythonAsync(code,
   setTimeout( () => {
     runPython(code,
       inputDataRecords,
+      outputData,
       (result) => {
         onAfterDone();
         onResult(result);
