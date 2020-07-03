@@ -9,6 +9,7 @@ import {
   useWatchable,
   Button,
   Box,
+  ConfirmationDialog,
   Dialog,
   FieldPickerSynced,
   FormField,
@@ -486,6 +487,8 @@ function SettingsComponent() {
 
   const isScriptInputVariablesEnabled = getConfigPathElse(globalConfig, "isScriptInputVariablesEnabled", true);
 
+  const isScriptOutputVariablesEnabled = getConfigPathElse(globalConfig, "isScriptOutputVariablesEnabled", false);
+
   const scriptInputVariableNamesTableId
     = globalConfig.get("scriptInputVariableNamesTableId");
 
@@ -495,11 +498,23 @@ function SettingsComponent() {
   const scriptInputVariableNamesFieldId
     = globalConfig.get("scriptInputVariableNamesFieldId");
 
+  const scriptOutputVariableNamesTableId
+    = globalConfig.get("scriptOutputVariableNamesTableId");
+
+  const scriptOutputVariableNamesViewId
+    = globalConfig.get("scriptOutputVariableNamesViewId");
+
+  const scriptOutputVariableNamesFieldId
+    = globalConfig.get("scriptOutputVariableNamesFieldId");
+
   const scriptSourceCodeTableId
     = globalConfig.get("scriptSourceCodeTableId");
 
   const scriptInputVariableNamesTable
     = base.getTableByIdIfExists(scriptInputVariableNamesTableId);
+
+  const scriptOutputVariableNamesTable
+    = base.getTableByIdIfExists(scriptOutputVariableNamesTableId);
 
   const scriptInputVariableNamesView
     = scriptInputVariableNamesTable
@@ -511,10 +526,24 @@ function SettingsComponent() {
       ? scriptInputVariableNamesTable.getFieldByIdIfExists(scriptInputVariableNamesFieldId)
       : null;
 
+  const scriptOutputVariableNamesView
+    = scriptOutputVariableNamesTable
+      ? scriptOutputVariableNamesTable.getViewByIdIfExists(scriptOutputVariableNamesViewId)
+      : null;
+
+  const scriptOutputVariableNamesField
+    = scriptOutputVariableNamesTable
+      ? scriptOutputVariableNamesTable.getFieldByIdIfExists(scriptOutputVariableNamesFieldId)
+      : null;
+
   const scriptSourceCodeTable
     = base.getTableByIdIfExists(scriptSourceCodeTableId);
 
   const scriptInputVariableRecords = useRecords(scriptInputVariableNamesView);
+
+  const scriptOutputVariableRecords = useRecords(scriptOutputVariableNamesView);
+
+  const [isScriptOutputVariablesWarningDialogOpen, setScriptOutputVariablesWarningDialogOpen] = useState(false);
 
   return (
   <Box
@@ -591,7 +620,7 @@ function SettingsComponent() {
     </FormField>
 
     <FormField
-      label="Enable Airtable Data Inputs and Outputs"
+      label="Airtable Data Inputs"
     >
       <Tooltip
         content="Enable this if you want to bring data from Airtable into your script."
@@ -604,6 +633,7 @@ function SettingsComponent() {
           label="Enable Script Input Variables"
         />
       </Tooltip>
+
     </FormField>
 
     <Box
@@ -697,6 +727,136 @@ function SettingsComponent() {
         </FormField>
       )}
     </Box>
+
+
+    <FormField
+      label="Airtable Data Outputs"
+    >
+      <Tooltip
+        content="Enable this if you want to write data from your script back out to Airtable."
+        placementX={Tooltip.placements.CENTER}
+        placementY={Tooltip.placements.BOTTOM}
+      >
+        <Switch
+          value={isScriptOutputVariablesEnabled}
+          onChange={newValue => {
+            globalConfig.setAsync('isScriptOutputVariablesEnabled', newValue)
+            setScriptOutputVariablesWarningDialogOpen(newValue);
+          }}
+          label="Enable Script Output Variables"
+        />
+      </Tooltip>
+      {isScriptOutputVariablesWarningDialogOpen && (
+        <ConfirmationDialog
+          isConfirmActionDangerous={true}
+          title="Script Output Variables Will Delete and Replace Data"
+          body="When you run a script with output variables, the execution of your script will delete and replace data in the tables that you have configured the script output variables to write to. Use Airtable snapshots, and proceed carefully!"
+          onConfirm={ () => {
+            setScriptOutputVariablesWarningDialogOpen(false);
+          }}
+          onCancel={ () => {
+            globalConfig.setAsync('isScriptOutputVariablesEnabled', false)
+            setScriptOutputVariablesWarningDialogOpen(false);
+          }}
+        />
+      )}
+
+    </FormField>
+
+    <Box
+      display={isScriptOutputVariablesEnabled ? "flex" : "none"}
+      flexDirection="column"
+      padding={2}
+      border="thick"
+    >
+      <FormField
+        label="Configure Script Output Variable Names"
+        description="Tell this block what are all the python script variables that you want to use to create data within your script that will be written back out to Airtable."
+      >
+        <Box
+          display="flex"
+          flexDirection="column"
+          padding={2}
+          border="thick"
+          backgroundColor="lightGray1"
+        >
+          <FormField
+            label="Script Output Variable Names List Table"
+          >
+            <Tooltip
+              content="The table that contains your list of script output variable names."
+              placementX={Tooltip.placements.CENTER}
+              placementY={Tooltip.placements.BOTTOM}
+            >
+              <TablePickerSynced
+                globalConfigKey="scriptOutputVariableNamesTableId" />
+            </Tooltip>
+          </FormField>
+          { scriptOutputVariableNamesTable && (
+          <FormField
+            label="Script Output Variable Names List View"
+          >
+            <Tooltip
+              content="The view that contains your list of script output variable names."
+              placementX={Tooltip.placements.CENTER}
+              placementY={Tooltip.placements.BOTTOM}
+            >
+              <ViewPickerSynced
+                table={scriptOutputVariableNamesTable}
+                globalConfigKey="scriptOutputVariableNamesViewId" />
+            </Tooltip>
+          </FormField>
+          )}
+          { scriptOutputVariableNamesTable && (
+          <FormField
+            label="Script Output Variable Names List Field"
+          >
+            <Tooltip
+              content="The field that defines your script output variable names."
+              placementX={Tooltip.placements.CENTER}
+              placementY={Tooltip.placements.BOTTOM}
+            >
+              <FieldPickerSynced
+                table={scriptOutputVariableNamesTable}
+                globalConfigKey="scriptOutputVariableNamesFieldId" />
+            </Tooltip>
+          </FormField>
+          )}
+        </Box>
+      </FormField>
+
+      {scriptOutputVariableRecords && scriptOutputVariableNamesField && (
+        <FormField
+          label="Configure Script Output Variable Data"
+          description="For each of the script output variables that you've defined, tell this block what table to write the data out to after the script executes."
+        >
+          <Box
+            display="flex"
+            flexDirection="column"
+            padding={2}
+            border="thick"
+            backgroundColor="lightGray1"
+          >
+            {scriptOutputVariableRecords
+              .filter(scriptOutputVariableRecord =>
+                scriptOutputVariableRecord.getCellValueAsString(scriptOutputVariableNamesField) != '')
+              .map(scriptOutputVariableRecord => {
+              return <ConfigureScriptVariable
+                scriptVariableRecord={scriptOutputVariableRecord}
+                scriptVariableNamesField={scriptOutputVariableNamesField}
+                tablePickerGlobalConfigKeyPath="scriptOutputVariableDataTableId"
+                // TODO: remove view selection for output variable data
+                viewPickerGlobalConfigKeyPath="scriptOutputVariableDataViewId"
+                tablePickerTooltipText="The table to write the variable data out to after the script executes."
+                // TODO: remove view selection for output variable data
+                viewPickerTooltipText="TODO remove view selection for output variables."
+              />;
+            })}
+          </Box>
+        </FormField>
+      )}
+    </Box>
+
 
   </Box>
   );
