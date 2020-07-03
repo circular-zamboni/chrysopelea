@@ -603,7 +603,7 @@ function SettingsComponent() {
           label="Script Variable Names List Table"
         >
           <Tooltip
-            content="The table that contains your list of script variable names."
+            content="The table that contains your list of input script variable names."
             placementX={Tooltip.placements.CENTER}
             placementY={Tooltip.placements.BOTTOM}
           >
@@ -616,7 +616,7 @@ function SettingsComponent() {
           label="Script Variable Names List View"
         >
           <Tooltip
-            content="The view that contains your list of script variable names."
+            content="The view that contains your list of input script variable names."
             placementX={Tooltip.placements.CENTER}
             placementY={Tooltip.placements.BOTTOM}
           >
@@ -631,7 +631,7 @@ function SettingsComponent() {
           label="Script Variable Names List Field"
         >
           <Tooltip
-            content="The field that defines your script variable names."
+            content="The field that defines your input script variable names."
             placementX={Tooltip.placements.CENTER}
             placementY={Tooltip.placements.BOTTOM}
           >
