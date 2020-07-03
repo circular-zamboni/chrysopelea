@@ -24,3 +24,4 @@ Python in Airtable.
 - [x] disable running until all of pyodide including libs are loaded
 - [ ] react properly when script table rows added/removed
 - [ ] make chrysopelea object be a proper import in python land
+- [ ] replace getConfigPathElse 'else' values with constants.

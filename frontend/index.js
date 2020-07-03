@@ -966,12 +966,14 @@ function Chrysopelea({setIsShowingSettings}) {
   const isShowDataInputsSummaryEnabled        = getConfigPathElse(globalConfig, 'isShowDataInputsSummaryEnabled', true);
   const isShowDataInputsSummaryFieldsEnabled  = getConfigPathElse(globalConfig, 'isShowDataInputsSummaryFieldsEnabled', false);
   const isShowDataOutputsSummaryEnabled       = getConfigPathElse(globalConfig, 'isShowDataOutputsSummaryEnabled', true);
+  const isShowDataOutputsSummaryFieldsEnabled = getConfigPathElse(globalConfig, 'isShowDataOutputsSummaryFieldsEnabled', false);
   const isShowScriptResultsEnabled            = getConfigPathElse(globalConfig, 'isShowScriptResultsEnabled', true);
   const isShowScriptErrorsEnabled             = getConfigPathElse(globalConfig, 'isShowScriptErrorsEnabled', true);
   const isShowPlotsEnabled                    = getConfigPathElse(globalConfig, 'isShowPlotsEnabled', true);
   const isRunAutomaticallyWhenInputsUpdated   = getConfigPathElse(globalConfig, 'isRunAutomaticallyWhenInputsUpdated', false);
   const isBlockControlsEnabled                = getConfigPathElse(globalConfig, 'isBlockControlsEnabled', true);
   const isScriptInputVariablesEnabled         = getConfigPathElse(globalConfig, "isScriptInputVariablesEnabled", true);
+  const isScriptOutputVariablesEnabled        = getConfigPathElse(globalConfig, "isScriptOutputVariablesEnabled", false);
 
   const [isThereAreNoScriptsDialogOpen, setThereAreNoScriptsDialogOpen] = useState(false);
 
@@ -1343,7 +1345,17 @@ function Chrysopelea({setIsShowingSettings}) {
     >
       <Heading>Data Outputs Summary</Heading>
       {isScriptRunning ? <Loader/> : <Text/>}
-      <div>more here</div>
+      { isScriptOutputVariablesEnabled
+        ?
+          <DataOutputsSummary
+            isShowDataOutputsSummaryFieldsEnabled={isShowDataOutputsSummaryFieldsEnabled}
+            setShowDataOutputsSummaryFieldsEnabled={(newValue) =>
+              globalConfig.setAsync('isShowDataOutputsSummaryFieldsEnabled', newValue)
+            }
+          />
+        :
+          <Text>Data Outputs Are Disabled In Settings</Text>
+      }
     </Box>
 
     <Box
@@ -1502,6 +1514,61 @@ function DataInputsFieldInfo({variableName, dataRecord}) {
     </table>
   )
 }
+
+function DataOutputsSummary({
+  isShowDataOutputsSummaryFieldsEnabled,
+  setShowDataOutputsSummaryFieldsEnabled}) {
+  return (
+    <table style={{backgroundColor: '#272822',
+                    color: '#F8F8F2',
+                    borderCollapse: 'collapse',
+                    border: '5px solid #272822'
+                  }}>
+      <thead>
+        <tr>
+          <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>Variable</th>
+          <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>Access in script using...</th>
+          <th style={{textAlign: 'left', borderBottom: '1px solid #75715E'}}>
+            <Switch
+              flex="1"
+              flexGrow="0"
+              marginBottom="5px"
+              backgroundColor="#F8F8F2"
+              value={isShowDataOutputsSummaryFieldsEnabled}
+              onChange={newValue => setShowDataOutputsSummaryFieldsEnabled(newValue)}
+              label="Show Fields"
+            />
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        { /*
+          Object.keys(dataRecords).map(variableName => {
+            return (
+              <tr key={variableName}>
+                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{variableName}</td>
+                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>chrysopelea.{variableName}</td>
+                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{dataRecords[variableName].length}</td>
+                <td style={{borderBottom: '1px solid #75715E', width: '60%'}}>
+                  { isShowDataOutputsSummaryFieldsEnabled ?
+                    <DataOutputsFieldInfo
+                      variableName={variableName}
+                      dataRecord={dataRecords[variableName]}
+                    />
+                    :
+                    ""
+                  }
+                </td>
+              </tr>
+            );
+          })
+          */
+        }
+      </tbody>
+    </table>
+  );
+}
+
 
 function Plots({plotData}) {
   return (
