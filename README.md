@@ -26,3 +26,5 @@ Python in Airtable.
 - [ ] make chrysopelea object be a proper import in python land
 - [ ] replace getConfigPathElse 'else' values with constants.
 - [ ] better thread handling when running script (?)
+- [ ] add a check on multiple script variables sanitizing to the same name
+- [ ] check on permissions for creating / deleting records for script output variables

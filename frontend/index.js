@@ -26,6 +26,8 @@ import 'codemirror/mode/python/python';
 import {loadCSSFromString} from '@airtable/blocks/ui';
 import React, {useEffect, useState} from 'react';
 
+const AIRTABLE_RECORDS_BATCH_SIZE = 50;
+
 // This is way ugly, not sure the real way to do pull in this CSS within the airtable blocks build system.
 const codeMirrorCss = `/* BASICS */
 
@@ -1134,7 +1136,19 @@ function Chrysopelea({setIsShowingSettings}) {
         if ( !(scriptOutputVariableName in outputData)) {
           outputData[scriptOutputVariableName] = {};
           outputData[scriptOutputVariableName].outputDataTableId = globalConfig.get(["scriptOutputVariableDataTableId", scriptOutputVariableName]);
+          outputData[scriptOutputVariableName].dataTable =  outputData[scriptOutputVariableName].outputDataTableId !== undefined
+                                                          ? base.getTableByIdIfExists(outputData[scriptOutputVariableName].outputDataTableId)
+                                                          : null;
           outputData[scriptOutputVariableName].outputDataArray = new Array();
+
+          outputData[scriptOutputVariableName].sanitizedToUnsanitizedFieldNames = {};
+          if( outputData[scriptOutputVariableName].dataTable !== null ) {
+            outputData[scriptOutputVariableName].dataTable.fields.map(field => {
+              var sanitizedFieldName = getSanitizedScriptIdentifier(field.name);
+              // TODO: check data table fields here for duplicate sanitized names
+              outputData[scriptOutputVariableName].sanitizedToUnsanitizedFieldNames[sanitizedFieldName] = field.name;
+            });
+          }
         }
       });
     }
@@ -1188,7 +1202,14 @@ function Chrysopelea({setIsShowingSettings}) {
     setPlots(plotData);
   }
 
-  const handleRunScript = event => {
+  const handleOutputData = async (outputData, chrysopeleaOutputs) => {
+    Object.keys(outputData).map(outputVariableName => {
+      //alert("Wrote ["+outputData[outputVariableName].numRecordsCreated + "] for ["+outputVariableName+"]");
+    });
+  }
+
+
+  const handleRunScript = (event) => {
     runPythonAsync(isUserCodeDirty ? userCode : selectedScriptSourceValue,
       inputDataRecords,
       outputData,
@@ -1196,7 +1217,8 @@ function Chrysopelea({setIsShowingSettings}) {
       handlePythonError,
       handlePlotsUpdated,
       () => {setScriptRunning(true)},
-      () => {setScriptRunning(false)}
+      () => {setScriptRunning(false)},
+      handleOutputData
     );
   }
 
@@ -1496,7 +1518,7 @@ function DataInputsSummary({inputDataRecords,
               backgroundColor="#F8F8F2"
               value={isShowDataInputsSummaryFieldsEnabled}
               onChange={newValue => setShowDataInputsSummaryFieldsEnabled(newValue)}
-              label="Show Fields"
+              label="Show Script Input Variable Fields"
             />
           </th>
         </tr>
@@ -1548,10 +1570,12 @@ function DataInputsFieldInfo({variableName, dataRecord}) {
         {
           Object.keys(record.parentTable.fields).map(fieldIndex => {
             var fieldName = record.parentTable.fields[fieldIndex].name;
+            var sanitizedVariableName = getSanitizedScriptIdentifier(variableName);
+            var sanitizedFieldName = getSanitizedScriptIdentifier(fieldName);
             return (
               <tr key={fieldName}>
                 <td style={{wordBreak: 'break-all', width: '30%'}}>{fieldName}</td>
-                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>all_the_{fieldName.replace(/\s/g,'_')} = [row.getCellValue("{fieldName}") for row in chrysopelea.inputs.{variableName}]</td>
+                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>{sanitizedVariableName}_{sanitizedFieldName} = [row.getCellValue("{fieldName}") for row in chrysopelea.inputs.{sanitizedVariableName}]</td>
               </tr>
             )
           })
@@ -1583,7 +1607,7 @@ function DataOutputsSummary({outputData,
               backgroundColor="#F8F8F2"
               value={isShowDataOutputsSummaryFieldsEnabled}
               onChange={newValue => setShowDataOutputsSummaryFieldsEnabled(newValue)}
-              label="Show Fields"
+              label="Show Script Output Variable Fields"
             />
           </th>
         </tr>
@@ -1636,11 +1660,12 @@ function DataOutputsFieldInfo({variableName, data}) {
           // all_the_{fieldName.replace(/\s/g,'_')} = [row.getCellValue("{fieldName}") for row in chrysopelea.{variableName}]
           dataTable.fields.map(field => {
             var fieldName = field.name;
-            var strippedFieldName = fieldName.replace(/\s/g,'_');
+            var sanitizedVariableName = getSanitizedScriptIdentifier(variableName);
+            var sanitizedFieldName = getSanitizedScriptIdentifier(fieldName);
             return (
               <tr key={fieldName}>
                 <td style={{wordBreak: 'break-all', width: '30%'}}>{fieldName}</td>
-                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>chrysopelea.outputs.{strippedFieldName} TODO HERE</td>
+                <td style={{wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>chrysopelea.outputs.{sanitizedVariableName}.{sanitizedFieldName}.push(value)</td>
               </tr>
             )
           })
@@ -2144,28 +2169,94 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   }
 });
 
-function runPython(userCode, inputDataRecords, outputData, onResult, onError, onPlots) {
-    // This object will be accessible in python using 'from js import airtable'.
-    window.chrysopelea = {};
-    window.chrysopelea.inputs  = {};
-    window.chrysopelea.outputs = {};
-    window.chrysopelea.plots   = {};
-    Object.keys(inputDataRecords).map(inputVariableName => {
-      window.chrysopelea.inputs[inputVariableName] = inputDataRecords[inputVariableName];
-    });
-    Object.keys(outputData).map(outputVariableName => {
-      window.chrysopelea.outputs[outputVariableName] = new Array();
-    });
-    try {
-      const codeToRun = addCodeMagic(userCode);
-      let result = pyodide.runPython(codeToRun);
-      console.debug('script result: ' + result);
-      onPlots(window.chrysopelea.plots);
-      onResult(result);
-    } catch (e) {
-      console.error(`error: ${e}`);
-      onError(e.message);
+function getSanitizedScriptIdentifier(identifier) {
+  return identifier.replace(/\s/g,'_');
+}
+
+function runPython(userCode, inputDataRecords, outputData, onResult, onError, onPlots, onOutputData) {
+  // TODO: need to to something here with respect to multiple script output variables resolving
+  // to the same sanitized output variable name, i.e. two that are the same except for whitespace.
+
+  // This object will be accessible in python using 'from js import chrysopelea'.
+  window.chrysopelea = {};
+  window.chrysopelea.inputs  = {};
+  window.chrysopelea.outputs = {};
+  window.chrysopelea.plots   = {};
+  Object.keys(inputDataRecords).map(inputVariableName => {
+    window.chrysopelea.inputs[getSanitizedScriptIdentifier(inputVariableName)] = inputDataRecords[inputVariableName];
+  });
+  Object.keys(outputData).map(outputVariableName => {
+    var sanitizedOutputVariableName = getSanitizedScriptIdentifier(outputVariableName);
+    window.chrysopelea.outputs[sanitizedOutputVariableName] = {};
+    if( outputData[outputVariableName].dataTable !== null ) {
+      outputData[outputVariableName].dataTable.fields.map(field => {
+        var sanitizedFieldName = getSanitizedScriptIdentifier(field.name);
+        window.chrysopelea.outputs[sanitizedOutputVariableName][sanitizedFieldName] = [];
+      });
     }
+  });
+  try {
+    const codeToRun = addCodeMagic(userCode);
+    let result = pyodide.runPython(codeToRun);
+    console.debug('script result: ' + result);
+    onPlots(window.chrysopelea.plots);
+    onResult(result);
+    writeOutputDataToAirtable(outputData, window.chrysopelea.outputs);
+    onOutputData(outputData, window.chrysopelea.outputs);
+  } catch (e) {
+    console.error(`error: ${e}`);
+    onError(e.message);
+  }
+}
+
+async function writeOutputDataToAirtable(outputData, chrysopeleaOutputs) {
+  Object.keys(outputData).map(outputVariableName => {
+    var sanitizedOutputVariableName = getSanitizedScriptIdentifier(outputVariableName);
+    let dataTable = outputData[outputVariableName].dataTable;
+    if( dataTable !== null ) {
+      const tableRecords = dataTable.selectRecords();
+      /* await?? */ deleteRecords(dataTable, tableRecords);
+    }
+    let recordDefs = [];
+    Object.keys(chrysopeleaOutputs[sanitizedOutputVariableName]).map(sanitizedFieldName => {
+      let fieldRowIndex = 0;
+      chrysopeleaOutputs[sanitizedOutputVariableName][sanitizedFieldName].map(fieldValue => {
+        if( recordDefs.length < fieldRowIndex + 1 ) {
+          recordDefs[fieldRowIndex] = {};
+          recordDefs[fieldRowIndex].fields = {};
+        }
+        // TODO: this actually needs to be unsanitized field name
+        let unsanitizedFieldName = outputData[outputVariableName].sanitizedToUnsanitizedFieldNames[sanitizedFieldName];
+        recordDefs[fieldRowIndex].fields[unsanitizedFieldName] = fieldValue;
+        fieldRowIndex++;
+      });
+    });
+    //console.debug('Script outputs for ['+outputVariableName+']');
+    //console.debug(JSON.stringify(recordDefs));
+    /* await?? */ let createdRecordIds = createRecords(dataTable, recordDefs);
+    outputData[outputVariableName].numRecordsCreated = createdRecordIds.length;
+  });
+}
+
+async function deleteRecords(table, records) {
+  let i = 0;
+  while (i < records.length) {
+    const recordBatch = records.slice(i, i + AIRTABLE_RECORDS_BATCH_SIZE);
+    await table.deleteRecordsAsync(recordBatch);
+    i += AIRTABLE_RECORDS_BATCH_SIZE;
+  }
+}
+
+async function createRecords(table, recordDefs) {
+  let i = 0;
+  const createdRecordIds = [];
+  while (i < recordDefs.length) {
+    const recordBatch = recordDefs.slice(i, i + AIRTABLE_RECORDS_BATCH_SIZE);
+    const thisBatchRecordIds = await table.createRecordsAsync(recordBatch);
+    i += AIRTABLE_RECORDS_BATCH_SIZE;
+    createdRecordIds.push(...thisBatchRecordIds);
+  }
+  return createdRecordIds;
 }
 
 function addCodeMagic(userCode) {
@@ -2195,7 +2286,8 @@ function runPythonAsync(code,
   onError,
   onPlots,
   onBeforeStart,
-  onAfterDone) {
+  onAfterDone,
+  onOutputData) {
 
   onBeforeStart();
 
@@ -2211,7 +2303,8 @@ function runPythonAsync(code,
         onAfterDone();
         onError(error);
       },
-      onPlots);
+      onPlots,
+      onOutputData);
   }, 100);
 
 }
