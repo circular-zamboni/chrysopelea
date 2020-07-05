@@ -1204,7 +1204,7 @@ function Chrysopelea({setIsShowingSettings}) {
 
   const handleOutputData = async (outputData, chrysopeleaOutputs) => {
     Object.keys(outputData).map(outputVariableName => {
-      //alert("Wrote ["+outputData[outputVariableName].numRecordsCreated + "] for ["+outputVariableName+"]");
+      alert("Wrote ["+outputData[outputVariableName].numRecordsCreated + "] for ["+outputVariableName+"]");
     });
   }
 
@@ -2201,8 +2201,11 @@ function runPython(userCode, inputDataRecords, outputData, onResult, onError, on
     console.debug('script result: ' + result);
     onPlots(window.chrysopelea.plots);
     onResult(result);
-    writeOutputDataToAirtable(outputData, window.chrysopelea.outputs);
-    onOutputData(outputData, window.chrysopelea.outputs);
+    writeOutputDataToAirtable(outputData, window.chrysopelea.outputs)
+    .then( () => {
+      onOutputData(outputData, window.chrysopelea.outputs);
+    });
+
   } catch (e) {
     console.error(`error: ${e}`);
     onError(e.message);
@@ -2210,53 +2213,74 @@ function runPython(userCode, inputDataRecords, outputData, onResult, onError, on
 }
 
 async function writeOutputDataToAirtable(outputData, chrysopeleaOutputs) {
-  Object.keys(outputData).map(outputVariableName => {
-    var sanitizedOutputVariableName = getSanitizedScriptIdentifier(outputVariableName);
-    let dataTable = outputData[outputVariableName].dataTable;
-    if( dataTable !== null ) {
-      const tableRecords = dataTable.selectRecords();
-      /* await?? */ deleteRecords(dataTable, tableRecords);
-    }
-    let recordDefs = [];
-    Object.keys(chrysopeleaOutputs[sanitizedOutputVariableName]).map(sanitizedFieldName => {
-      let fieldRowIndex = 0;
-      chrysopeleaOutputs[sanitizedOutputVariableName][sanitizedFieldName].map(fieldValue => {
-        if( recordDefs.length < fieldRowIndex + 1 ) {
-          recordDefs[fieldRowIndex] = {};
-          recordDefs[fieldRowIndex].fields = {};
-        }
-        // TODO: this actually needs to be unsanitized field name
-        let unsanitizedFieldName = outputData[outputVariableName].sanitizedToUnsanitizedFieldNames[sanitizedFieldName];
-        recordDefs[fieldRowIndex].fields[unsanitizedFieldName] = fieldValue;
-        fieldRowIndex++;
-      });
+  return new Promise( (resolve, reject) => {
+    Object.keys(outputData).map(outputVariableName => {
+      var sanitizedOutputVariableName = getSanitizedScriptIdentifier(outputVariableName);
+      let dataTable = outputData[outputVariableName].dataTable;
+      if( dataTable !== null ) {
+        const queryResult = dataTable.selectRecords();
+        queryResult.loadDataAsync().then( () => {
+          deleteRecords(dataTable, queryResult.records)
+          .then( () => {
+            let recordDefs = [];
+            Object.keys(chrysopeleaOutputs[sanitizedOutputVariableName]).map(sanitizedFieldName => {
+              let fieldRowIndex = 0;
+              chrysopeleaOutputs[sanitizedOutputVariableName][sanitizedFieldName].map(fieldValue => {
+                if( recordDefs.length < fieldRowIndex + 1 ) {
+                  recordDefs[fieldRowIndex] = {};
+                  recordDefs[fieldRowIndex].fields = {};
+                }
+                // TODO: this actually needs to be unsanitized field name
+                let unsanitizedFieldName = outputData[outputVariableName].sanitizedToUnsanitizedFieldNames[sanitizedFieldName];
+                recordDefs[fieldRowIndex].fields[unsanitizedFieldName] = fieldValue;
+                fieldRowIndex++;
+              });
+            });
+            //console.debug('Script outputs for ['+outputVariableName+']');
+            //console.debug(JSON.stringify(recordDefs));
+            /* await?? */ createRecords(dataTable, recordDefs)
+            .then( (createdRecordIds) => {
+              outputData[outputVariableName].numRecordsCreated = createdRecordIds.length;
+              resolve();
+            })
+          });
+        });
+      }
     });
-    //console.debug('Script outputs for ['+outputVariableName+']');
-    //console.debug(JSON.stringify(recordDefs));
-    /* await?? */ let createdRecordIds = createRecords(dataTable, recordDefs);
-    outputData[outputVariableName].numRecordsCreated = createdRecordIds.length;
+
   });
 }
 
-async function deleteRecords(table, records) {
-  let i = 0;
-  while (i < records.length) {
-    const recordBatch = records.slice(i, i + AIRTABLE_RECORDS_BATCH_SIZE);
-    await table.deleteRecordsAsync(recordBatch);
-    i += AIRTABLE_RECORDS_BATCH_SIZE;
-  }
+function deleteRecords(table, records) {
+  return new Promise ( (resolve, reject) => {
+    let i = 0;
+    let loopPromises = [];
+    while (i < records.length) {
+      const recordBatch = records.slice(i, i + AIRTABLE_RECORDS_BATCH_SIZE);
+      loopPromises.push(table.deleteRecordsAsync(recordBatch));
+      i += AIRTABLE_RECORDS_BATCH_SIZE;
+    }
+    Promise.all(loopPromises)
+    .then( (values) => {
+      resolve();
+    })
+  });
 }
 
-async function createRecords(table, recordDefs) {
-  let i = 0;
-  const createdRecordIds = [];
-  while (i < recordDefs.length) {
-    const recordBatch = recordDefs.slice(i, i + AIRTABLE_RECORDS_BATCH_SIZE);
-    const thisBatchRecordIds = await table.createRecordsAsync(recordBatch);
-    i += AIRTABLE_RECORDS_BATCH_SIZE;
-    createdRecordIds.push(...thisBatchRecordIds);
-  }
-  return createdRecordIds;
+function createRecords(table, recordDefs) {
+  return new Promise ( (resolve, reject) => {
+    let i = 0;
+    let loopPromises = [];
+    while (i < recordDefs.length) {
+      const recordBatch = recordDefs.slice(i, i + AIRTABLE_RECORDS_BATCH_SIZE);
+      loopPromises.push(table.createRecordsAsync(recordBatch));
+      i += AIRTABLE_RECORDS_BATCH_SIZE;
+    }
+    Promise.all(loopPromises)
+    .then( (createdRecordIds) => {
+      resolve(createdRecordIds.flat());
+    });
+  });
 }
 
 function addCodeMagic(userCode) {
