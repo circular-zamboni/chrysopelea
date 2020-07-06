@@ -1382,6 +1382,7 @@ function Chrysopelea({setIsShowingSettings}) {
           Script engine loading...
         </Text>
       </Box>
+      <!--
       <Switch
         flex="1"
         flexGrow="0"
@@ -1396,6 +1397,7 @@ function Chrysopelea({setIsShowingSettings}) {
       >
       Help
       </Button>
+      -->
     </Box>
 
     <Box
