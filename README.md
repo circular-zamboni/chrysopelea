@@ -2,10 +2,9 @@
 Python in Airtable.
 
 - [ ] option for autorun on input data changes
-- [x] multiple plots example in demo base
 - [ ] provide option for where to load pyodide from
 - [X] disable view unless maximized
-- [ ] new script
+- [X] new script
 - [x] load pyodide from cdn
 - [x] configure script input data
 - [x] configure script output data
@@ -20,6 +19,7 @@ Python in Airtable.
 - [x] save main display switch states to config, (including "show fields")
 - [x] add switch in settings to hide main display controls
 - [x] disable running until all of pyodide including libs are loaded
+- [x] multiple plots example in demo base
 - [ ] configure script input from github path (?)
 - [ ] save script output plots to attachment field(s) (is this possible?)
 - [ ] configuration of script output images to attachments field(s)
