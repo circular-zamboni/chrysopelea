@@ -1426,8 +1426,8 @@ function Chrysopelea({setIsShowingSettings}) {
       border="default"
     >
       <Heading>Data Outputs Summary</Heading>
-      {isOutputDataSaving ? <Loader/> : <Text/>}
-      {isOutputDataSaving && (
+      {(isScriptOutputVariablesEnabled && isOutputDataSaving) ? <Loader/> : <Text/>}
+      {isScriptOutputVariablesEnabled && isOutputDataSaving && (
         <Dialog>
           <Heading>Writing Script Outputs To Airtable</Heading>
           <ProgressBar
