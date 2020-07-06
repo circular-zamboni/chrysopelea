@@ -1,10 +1,7 @@
 # chrysopelea
 Python in Airtable.
 
-- [ ] option for autorun on input data changes
-- [ ] provide option for where to load pyodide from
-- [X] disable view unless maximized
-- [X] new script
+
 - [x] load pyodide from cdn
 - [x] configure script input data
 - [x] configure script output data
@@ -18,8 +15,12 @@ Python in Airtable.
 - [x] matplotlib display area
 - [x] save main display switch states to config, (including "show fields")
 - [x] add switch in settings to hide main display controls
+- [X] disable view unless maximized
+- [X] new script
 - [x] disable running until all of pyodide including libs are loaded
 - [x] multiple plots example in demo base
+- [ ] option for autorun on input data changes
+- [ ] provide option for where to load pyodide from
 - [ ] configure script input from github path (?)
 - [ ] save script output plots to attachment field(s) (is this possible?)
 - [ ] configuration of script output images to attachments field(s)
