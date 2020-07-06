@@ -15,6 +15,7 @@ import {
   FormField,
   Heading,
   Loader,
+  ProgressBar,
   TablePickerSynced,
   Text,
   Tooltip,
@@ -982,6 +983,9 @@ function Chrysopelea({setIsShowingSettings}) {
   const [isUserCodeDirty, setIsUserCodeDirty] = useState(false);
 
   const [isScriptRunning, setScriptRunning] = useState(false);
+  const [isOutputDataSaving, setIsOutputDataSaving] = useState(false);
+  const [numOutputRecordsToDeleteAndSave, setNumOutputRecordsToDeleteAndSave] = useState(0);
+  const [numOutputRecordsDeletedAndSaved, setNumOutputRecordsDeletedAndSaved] = useState(0);
   const [liveScriptNeedsRerun, setLiveScriptNeedsRerun] = useState(true);
 
   // plots =
@@ -1206,8 +1210,13 @@ function Chrysopelea({setIsShowingSettings}) {
     setPlots(plotData);
   }
 
-  const handleOutputData = (outputData, chrysopeleaOutputs) => {
+  const handleSavingOutputData = () => {
+    setIsOutputDataSaving(true);
+  }
+
+  const handleDoneSavingOutputData = (outputData, chrysopeleaOutputs) => {
     setOutputData(outputData);
+    setIsOutputDataSaving(false);
     forceUpdate();
   }
 
@@ -1221,7 +1230,10 @@ function Chrysopelea({setIsShowingSettings}) {
       handlePlotsUpdated,
       () => {setScriptRunning(true)},
       () => {setScriptRunning(false)},
-      handleOutputData
+      handleSavingOutputData,
+      handleDoneSavingOutputData,
+      setNumOutputRecordsToDeleteAndSave,
+      setNumOutputRecordsDeletedAndSaved
     );
   }
 
@@ -1414,7 +1426,15 @@ function Chrysopelea({setIsShowingSettings}) {
       border="default"
     >
       <Heading>Data Outputs Summary</Heading>
-      {isScriptRunning ? <Loader/> : <Text/>}
+      {isOutputDataSaving ? <Loader/> : <Text/>}
+      {isOutputDataSaving && (
+        <Dialog>
+          <Heading>Writing Script Outputs To Airtable</Heading>
+          <ProgressBar
+            progress={numOutputRecordsToDeleteAndSave == 0 ? 0.0 : ( numOutputRecordsDeletedAndSaved / numOutputRecordsToDeleteAndSave)}
+          />
+        </Dialog>
+      )}
       { isScriptOutputVariablesEnabled
         ?
           <DataOutputsSummary
@@ -2177,7 +2197,8 @@ function getSanitizedScriptIdentifier(identifier) {
   return identifier.replace(/\s/g,'_');
 }
 
-function runPython(userCode, inputDataRecords, outputData, onResult, onError, onPlots, onOutputData) {
+function runPython(userCode, inputDataRecords, outputData, onResult, onError, onPlots, onSavingOutputData, onDoneSavingOutputData,
+                    setNumOutputRecordsToDeleteAndSave, setNumOutputRecordsDeletedAndSaved) {
   // TODO: need to to something here with respect to multiple script output variables resolving
   // to the same sanitized output variable name, i.e. two that are the same except for whitespace.
 
@@ -2205,9 +2226,10 @@ function runPython(userCode, inputDataRecords, outputData, onResult, onError, on
     console.debug('script result: ' + result);
     onPlots(window.chrysopelea.plots);
     onResult(result);
-    writeOutputDataToAirtable(outputData, window.chrysopelea.outputs)
+    onSavingOutputData();
+    writeOutputDataToAirtable(outputData, window.chrysopelea.outputs, setNumOutputRecordsToDeleteAndSave, setNumOutputRecordsDeletedAndSaved)
     .then( () => {
-      onOutputData(outputData, window.chrysopelea.outputs);
+      onDoneSavingOutputData(outputData, window.chrysopelea.outputs);
     });
 
   } catch (e) {
@@ -2216,33 +2238,38 @@ function runPython(userCode, inputDataRecords, outputData, onResult, onError, on
   }
 }
 
-async function writeOutputDataToAirtable(outputData, chrysopeleaOutputs) {
+async function writeOutputDataToAirtable(outputData, chrysopeleaOutputs, setNumOutputRecordsToDeleteAndSave, setNumOutputRecordsDeletedAndSaved) {
   return new Promise( (resolve, reject) => {
     Object.keys(outputData).map(outputVariableName => {
       var sanitizedOutputVariableName = getSanitizedScriptIdentifier(outputVariableName);
       let dataTable = outputData[outputVariableName].dataTable;
       if( dataTable !== null ) {
+
+        let recordDefs = [];
+        Object.keys(chrysopeleaOutputs[sanitizedOutputVariableName]).map(sanitizedFieldName => {
+          let fieldRowIndex = 0;
+          chrysopeleaOutputs[sanitizedOutputVariableName][sanitizedFieldName].map(fieldValue => {
+            if( recordDefs.length < fieldRowIndex + 1 ) {
+              recordDefs[fieldRowIndex] = {};
+              recordDefs[fieldRowIndex].fields = {};
+            }
+            let unsanitizedFieldName = outputData[outputVariableName].sanitizedToUnsanitizedFieldNames[sanitizedFieldName];
+            recordDefs[fieldRowIndex].fields[unsanitizedFieldName] = fieldValue;
+            fieldRowIndex++;
+          });
+        });
+
         const queryResult = dataTable.selectRecords();
         queryResult.loadDataAsync().then( () => {
-          deleteRecords(dataTable, queryResult.records)
-          .then( () => {
-            let recordDefs = [];
-            Object.keys(chrysopeleaOutputs[sanitizedOutputVariableName]).map(sanitizedFieldName => {
-              let fieldRowIndex = 0;
-              chrysopeleaOutputs[sanitizedOutputVariableName][sanitizedFieldName].map(fieldValue => {
-                if( recordDefs.length < fieldRowIndex + 1 ) {
-                  recordDefs[fieldRowIndex] = {};
-                  recordDefs[fieldRowIndex].fields = {};
-                }
-                // TODO: this actually needs to be unsanitized field name
-                let unsanitizedFieldName = outputData[outputVariableName].sanitizedToUnsanitizedFieldNames[sanitizedFieldName];
-                recordDefs[fieldRowIndex].fields[unsanitizedFieldName] = fieldValue;
-                fieldRowIndex++;
-              });
-            });
+
+          setNumOutputRecordsToDeleteAndSave(queryResult.recordIds.length + recordDefs.length);
+          setNumOutputRecordsDeletedAndSaved(0);
+
+          deleteRecords(dataTable, queryResult.recordIds, setNumOutputRecordsDeletedAndSaved)
+          .then( (numDeleted) => {
             //console.debug('Script outputs for ['+outputVariableName+']');
             //console.debug(JSON.stringify(recordDefs));
-            /* await?? */ createRecords(dataTable, recordDefs)
+            createRecords(dataTable, recordDefs, numDeleted, setNumOutputRecordsDeletedAndSaved)
             .then( (createdRecordIds) => {
               outputData[outputVariableName].numRecordsCreated = createdRecordIds.length;
               resolve();
@@ -2269,7 +2296,7 @@ function each(arr, work) {
   return loop(arr, 0);
 }
 
-function deleteRecords(table, records) {
+function deleteRecords(table, records, setNumOutputRecordsDeletedAndSaved) {
   // Couldn't get this function to be an async function, something going on in transpiling, even if
   // it was marked as async.
   // So all this pure ugly instead.
@@ -2281,20 +2308,23 @@ function deleteRecords(table, records) {
       recordBatches.push(recordBatch);
       i += AIRTABLE_RECORDS_BATCH_SIZE;
     }
+    let numDeleted = 0;
     each(recordBatches, function(recordBatch, idx) {
       return new Promise( function(batchResolve, batchReject) {
           table.deleteRecordsAsync(recordBatch)
           .then( () => {
+            numDeleted += recordBatch.length;
+            setNumOutputRecordsDeletedAndSaved(numDeleted);
             batchResolve();
           })
       });
     }).then ( () => {
-      resolve();
+      resolve(numDeleted);
     })
   });
 }
 
-function createRecords(table, recordDefs) {
+function createRecords(table, recordDefs, numDeleted, setNumOutputRecordsDeletedAndSaved) {
   // Couldn't get this function to be an async function, something going on in transpiling, even if
   // it was marked as async.
   // So all this pure ugly instead.
@@ -2312,6 +2342,7 @@ function createRecords(table, recordDefs) {
           table.createRecordsAsync(recordBatch)
           .then( (batchCreatedRecordIds) => {
             createdRecordIds.push(batchCreatedRecordIds);
+            setNumOutputRecordsDeletedAndSaved(numDeleted + createdRecordIds.flat().length);
             batchResolve(createdRecordIds);
           })
       })
@@ -2351,7 +2382,10 @@ function runPythonAsync(code,
   onPlots,
   onBeforeStart,
   onAfterDone,
-  onOutputData) {
+  onSavingOutputData,
+  onDoneSavingOutputData,
+  setNumOutputRecordsToDeleteAndSave,
+  setNumOutputRecordsDeletedAndSaved) {
 
   onBeforeStart();
 
@@ -2368,7 +2402,10 @@ function runPythonAsync(code,
         onError(error);
       },
       onPlots,
-      onOutputData);
+      onSavingOutputData,
+      onDoneSavingOutputData,
+      setNumOutputRecordsToDeleteAndSave,
+      setNumOutputRecordsDeletedAndSaved);
   }, 100);
 
 }
