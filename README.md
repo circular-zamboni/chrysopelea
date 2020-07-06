@@ -31,3 +31,4 @@ Python in Airtable.
 - [ ] add a check on multiple script variables sanitizing to the same name
 - [ ] check on permissions for creating / deleting records for script output variables
 - [ ] configure a subset of fields to bring in for script input data
+- [ ] enable importing additional modules
