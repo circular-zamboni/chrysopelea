@@ -5,14 +5,15 @@ Python in Airtable.
 - [ ] provide option for where to load pyodide from
 - [x] configure script input data
 - [ ] configure a subset of fields to bring in for script input data
-- [ ] configure script output data
+- [x] configure script output data
 - [x] code editor w/ python highlighting
 - [x] select script
 - [ ] new script
 - [x] run script
 - [x] pull data inputs into script
-- [ ] pushing data outputs out of script
+- [x] pushing data outputs out of script
 - [x] script status / output
+- [ ] better script status for what state processing is in: reading input data, running script, saving plots, saving output data, done
 - [ ] option for autorun on input data changes
 - [x] matplotlib display area
 - [ ] configure script output images to attachments field(s)
