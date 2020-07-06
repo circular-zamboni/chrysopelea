@@ -13,7 +13,7 @@ Python in Airtable.
 - [x] pull data inputs into script
 - [x] pushing data outputs out of script
 - [x] script status / output
-- [ ] better script status for what state processing is in: reading input data, running script, saving plots, saving output data, done
+- [x] better script status for when saving output data back to airtable (progress bar?)
 - [ ] option for autorun on input data changes
 - [x] matplotlib display area
 - [ ] configure script output images to attachments field(s)
