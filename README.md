@@ -21,13 +21,12 @@ Python in Airtable.
 - [x] add switch in settings to hide main display controls
 - [x] disable running until all of pyodide including libs are loaded
 - [ ] configure script input from github path (?)
-- [ ] configure script output images to attachments field(s)
-- [ ] save script output plots to attachment field(s)
+- [ ] save script output plots to attachment field(s) (is this possible?)
+- [ ] configuration of script output images to attachments field(s)
 - [ ] debugging capability (?)
 - [ ] react properly when script table rows added/removed
 - [ ] make chrysopelea object be a proper import in python land
 - [ ] replace getConfigPathElse 'else' values with constants.
-- [ ] better thread handling when running script (?)
 - [ ] add a check on multiple script variables sanitizing to the same name
 - [ ] check on permissions for creating / deleting records for script output variables
 - [ ] configure a subset of fields to bring in for script input data
