@@ -445,7 +445,7 @@ function initializePython(onStatusChanged, onInitializeComplete) {
       console.log('Loading libraries.');
       onStatusChanged('Loading libraries.');
 
-      pyodide.loadPackage(['numpy', 'matplotlib'])
+      pyodide.loadPackage(['numpy', 'matplotlib', 'scipy'])
       .then( () => {
         var s = pyodide.runPython(
           'import numpy as np\n' +
