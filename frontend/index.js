@@ -1382,22 +1382,6 @@ function Chrysopelea({setIsShowingSettings}) {
           Script engine loading...
         </Text>
       </Box>
-      <!--
-      <Switch
-        flex="1"
-        flexGrow="0"
-        label="Run Automatically When Inputs Are Updated"
-        value={isRunAutomaticallyWhenInputsUpdated}
-        onChange={newValue => setRunAutomaticallyWhenInputsUpdated(newValue)}
-      />
-      <Button
-        onClick={() => handleHelp()}
-        size="small"
-        icon="help"
-      >
-      Help
-      </Button>
-      -->
     </Box>
 
     <Box
