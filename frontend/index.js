@@ -20,7 +20,8 @@ import {
   Text,
   Tooltip,
   Switch,
-  ViewPickerSynced
+  ViewPickerSynced,
+  ViewportConstraint
 } from '@airtable/blocks/ui';
 import {Controlled as CodeMirror} from 'react-codemirror2';
 import 'codemirror/mode/python/python';
@@ -479,9 +480,13 @@ function ChrysopeleaBlock() {
     return <SettingsComponent/>
   }
 
-  return <Chrysopelea
-            setIsShowingSettings={setIsShowingSettings}
-  />
+  return (
+    <ViewportConstraint minSize={{width: 1024}}>
+      <Chrysopelea
+        setIsShowingSettings={setIsShowingSettings}
+      />
+    </ViewportConstraint>
+  );
 }
 
 function SettingsComponent() {
