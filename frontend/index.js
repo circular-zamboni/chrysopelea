@@ -1225,6 +1225,19 @@ function Chrysopelea({setIsShowingSettings}) {
     forceUpdate();
   }
 
+  const handleNewScript = () => {
+    const newScriptBoilerplate =
+      'import numpy as np\n' +
+      'a = [1, 2]\n' +
+      'np.average(a)\n';
+    scriptSourceCodeTable.createRecordAsync({[scriptSourceCodeFieldId]: newScriptBoilerplate})
+    .then((recordId) => {
+      globalConfig.setAsync('selectedScriptSourceRecordId', recordId)
+    })
+    .then(()=> {
+      setIsUserCodeDirty(false);
+    });
+  }
 
   const handleRunScript = (event) => {
     runPythonAsync(isUserCodeDirty ? userCode : selectedScriptSourceValue,
