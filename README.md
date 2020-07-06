@@ -2,8 +2,9 @@
 Python in Airtable.
 
 - [ ] option for autorun on input data changes
-- [ ] multiple plots example in demo base
+- [x] multiple plots example in demo base
 - [ ] provide option for where to load pyodide from
+- [ ] disable view unless maximized
 - [ ] new script
 - [x] load pyodide from cdn
 - [x] configure script input data
