@@ -24,7 +24,7 @@ import {
 import {Controlled as CodeMirror} from 'react-codemirror2';
 import 'codemirror/mode/python/python';
 import {loadCSSFromString} from '@airtable/blocks/ui';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useReducer} from 'react';
 
 const AIRTABLE_RECORDS_BATCH_SIZE = 50;
 
@@ -1013,6 +1013,19 @@ function Chrysopelea({setIsShowingSettings}) {
 
   const [userCode, setUserCode] = useState(selectedScriptSourceValue !== undefined ? selectedScriptSourceValue : "");
 
+  // Dictionary keyed on scriptOutputVariableNAme. Value is array of data for that variable, to be written
+  // or already written by script.
+  //
+  // {
+  //   outputScriptVariableName: {
+  //        outputDataTableId: zzz, outputDataArray: [ {field1: val1, field2: val2, ...}, ... ]
+  //   },
+  //
+  //   ...
+  //
+  // }
+  const [outputData, setOutputData] = useState({});
+
   // Loading script input variable names.
   const scriptInputVariableNamesTableId = globalConfig.get("scriptInputVariableNamesTableId");
   const scriptInputVariableNamesViewId = globalConfig.get("scriptInputVariableNamesViewId");
@@ -1048,21 +1061,12 @@ function Chrysopelea({setIsShowingSettings}) {
 
   const scriptOutputVariableNamesRecords = useRecords(scriptOutputVariableNamesQueryResult);
 
+  // Need this 'forceUpdate' because of the weird eventing going on around running the python
+  // script. Some TLC probably needed around that.
+  const [ignored, forceUpdate] = useReducer(x => x + 1, 0);
+
   // Dictionary keyed on scriptInputVariableName. Value is query result with data for that variable.
   var inputDataRecords = {};
-
-  // Dictionary keyed on scriptOutputVariableNAme. Value is array of data for that variable, to be written
-  // or already written by script.
-  //
-  // {
-  //   outputScriptVariableName: {
-  //        outputDataTableId: zzz, outputDataArray: [ {field1: val1, field2: val2, ...}, ... ]
-  //   },
-  //
-  //   ...
-  //
-  // }
-  var outputData = {};
 
   const handleRecordsUpdated = (models, keys) => {
     setLiveScriptNeedsRerun(true);
@@ -1140,7 +1144,7 @@ function Chrysopelea({setIsShowingSettings}) {
                                                           ? base.getTableByIdIfExists(outputData[scriptOutputVariableName].outputDataTableId)
                                                           : null;
           outputData[scriptOutputVariableName].outputDataArray = new Array();
-
+          outputData[scriptOutputVariableName].numRecordsCreated = 0;
           outputData[scriptOutputVariableName].sanitizedToUnsanitizedFieldNames = {};
           if( outputData[scriptOutputVariableName].dataTable !== null ) {
             outputData[scriptOutputVariableName].dataTable.fields.map(field => {
@@ -1202,10 +1206,9 @@ function Chrysopelea({setIsShowingSettings}) {
     setPlots(plotData);
   }
 
-  const handleOutputData = async (outputData, chrysopeleaOutputs) => {
-    Object.keys(outputData).map(outputVariableName => {
-      alert("Wrote ["+outputData[outputVariableName].numRecordsCreated + "] for ["+outputVariableName+"]");
-    });
+  const handleOutputData = (outputData, chrysopeleaOutputs) => {
+    setOutputData(outputData);
+    forceUpdate();
   }
 
 
@@ -1587,7 +1590,8 @@ function DataInputsFieldInfo({variableName, dataRecord}) {
 
 function DataOutputsSummary({outputData,
   isShowDataOutputsSummaryFieldsEnabled,
-  setShowDataOutputsSummaryFieldsEnabled}) {
+  setShowDataOutputsSummaryFieldsEnabled,
+  outputVariableStats}) {
   return (
     <table style={{backgroundColor: '#272822',
                     color: '#F8F8F2',
@@ -1619,7 +1623,7 @@ function DataOutputsSummary({outputData,
               <tr key={variableName}>
                 <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{variableName}</td>
                 <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all', color: '#00CC00', fontFamily: 'monospace'}}>chrysopelea.outputs.{variableName}</td>
-                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{outputData[variableName].outputDataArray.length}</td>
+                <td style={{borderBottom: '1px solid #75715E', wordBreak: 'break-all'}}>{outputData[variableName].numRecordsCreated}</td>
                 <td style={{borderBottom: '1px solid #75715E', width: '60%'}}>
                   { isShowDataOutputsSummaryFieldsEnabled ?
                     <DataOutputsFieldInfo
@@ -2251,35 +2255,71 @@ async function writeOutputDataToAirtable(outputData, chrysopeleaOutputs) {
   });
 }
 
+function each(arr, work) {
+  function loop(arr, i) {
+    return new Promise(function(resolve, reject) {
+      if (i >= arr.length) {resolve();}
+      else try {
+        Promise.resolve(work(arr[i], i)).then(function() {
+          resolve(loop(arr, i+1))
+        }).catch(reject);
+      } catch(e) {reject(e);}
+    });
+  }
+  return loop(arr, 0);
+}
+
 function deleteRecords(table, records) {
+  // Couldn't get this function to be an async function, something going on in transpiling, even if
+  // it was marked as async.
+  // So all this pure ugly instead.
   return new Promise ( (resolve, reject) => {
     let i = 0;
-    let loopPromises = [];
+    let recordBatches = [];
     while (i < records.length) {
       const recordBatch = records.slice(i, i + AIRTABLE_RECORDS_BATCH_SIZE);
-      loopPromises.push(table.deleteRecordsAsync(recordBatch));
+      recordBatches.push(recordBatch);
       i += AIRTABLE_RECORDS_BATCH_SIZE;
     }
-    Promise.all(loopPromises)
-    .then( (values) => {
+    each(recordBatches, function(recordBatch, idx) {
+      return new Promise( function(batchResolve, batchReject) {
+          table.deleteRecordsAsync(recordBatch)
+          .then( () => {
+            batchResolve();
+          })
+      });
+    }).then ( () => {
       resolve();
     })
   });
 }
 
 function createRecords(table, recordDefs) {
+  // Couldn't get this function to be an async function, something going on in transpiling, even if
+  // it was marked as async.
+  // So all this pure ugly instead.
   return new Promise ( (resolve, reject) => {
     let i = 0;
-    let loopPromises = [];
+    let recordBatches = [];
     while (i < recordDefs.length) {
       const recordBatch = recordDefs.slice(i, i + AIRTABLE_RECORDS_BATCH_SIZE);
-      loopPromises.push(table.createRecordsAsync(recordBatch));
+      recordBatches.push(recordBatch);
       i += AIRTABLE_RECORDS_BATCH_SIZE;
     }
-    Promise.all(loopPromises)
-    .then( (createdRecordIds) => {
+    let createdRecordIds = [];
+    each(recordBatches, function(recordBatch, idx) {
+      return new Promise(function(batchResolve) {
+          table.createRecordsAsync(recordBatch)
+          .then( (batchCreatedRecordIds) => {
+            createdRecordIds.push(batchCreatedRecordIds);
+            batchResolve(createdRecordIds);
+          })
+      })
+    })
+    .then( () => {
       resolve(createdRecordIds.flat());
-    });
+    })
+
   });
 }
 
