@@ -481,11 +481,11 @@ function ChrysopeleaBlock() {
   }
 
   return (
-//    <ViewportConstraint minSize={{width: 1024}}>
+    <ViewportConstraint minSize={{width: 1024}}>
       <Chrysopelea
         setIsShowingSettings={setIsShowingSettings}
       />
-//    </ViewportConstraint>
+    </ViewportConstraint>
   );
 }
 
