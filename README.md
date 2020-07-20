@@ -19,6 +19,7 @@ Python in Airtable.
 - [X] new script
 - [x] disable running until all of pyodide including libs are loaded
 - [x] multiple plots example in demo base
+- [ ] Add inline documentation on how to save plots, similar to inline documentation for how to read/write input/output data.
 - [ ] help
 - [ ] option for autorun on input data changes
 - [ ] provide option for where to load pyodide from
