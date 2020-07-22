@@ -2163,7 +2163,9 @@ var languagePluginLoader = function(whatIsSelf) {
         Module.locateFile = (path) => baseURL + path;
     var postRunPromise = new Promise((resolve, reject) => {
       Module.postRun = () => {
-        delete whatIsSelf.Module;
+        // This delete was causing problems. Not sure if assignment to undefined is right or not but seems to work.
+        //delete whatIsSelf.Module;
+        whatIsSelf.Module = undefined;
         fetch(`${baseURL}packages.json`)
             .then((response) => response.json())
             .then((json) => {
