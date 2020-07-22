@@ -19,10 +19,11 @@ Python in Airtable.
 - [X] new script
 - [x] disable running until all of pyodide including libs are loaded
 - [x] multiple plots example in demo base
+- [x] provide option for where to load pyodide from
 - [ ] Add inline documentation on how to save plots, similar to inline documentation for how to read/write input/output data.
 - [ ] help
 - [ ] option for autorun on input data changes
-- [ ] provide option for where to load pyodide from
+- [ ] better sanitizing of script identifiers -- getSanitizedScriptIdentifier()
 - [ ] configure script input from github path (?)
 - [ ] save script output plots to attachment field(s) (is this possible?)
 - [ ] configuration of script output images to attachments field(s)
