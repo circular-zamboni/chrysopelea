@@ -14,6 +14,7 @@ import {
   FieldPickerSynced,
   FormField,
   Heading,
+  Input,
   Loader,
   ProgressBar,
   TablePickerSynced,
@@ -28,6 +29,7 @@ import 'codemirror/mode/python/python';
 import {loadCSSFromString} from '@airtable/blocks/ui';
 import React, {useEffect, useState, useReducer} from 'react';
 
+const DEFAULT_PYODIDE_BASE_URL = 'https://pyodide-cdn2.iodide.io/v0.15.0/full/';
 const AIRTABLE_RECORDS_BATCH_SIZE = 50;
 
 // This is way ugly, not sure the real way to do pull in this CSS within the airtable blocks build system.
@@ -431,33 +433,43 @@ const codeMirrorMonokaiTheme = `/* Based on Sublime Text's Monokai theme */
 loadCSSFromString(codeMirrorCss);
 loadCSSFromString(codeMirrorMonokaiTheme);
 
-function initializePython(onStatusChanged, onInitializeComplete) {
+function initializePython(onStatusChanged, onInitializeComplete, onInitializeFailed, pyodideBaseUrl) {
   try {
     console.log('Loading language.');
     onStatusChanged('Loading language.');
-    languagePluginLoader
-    .then( () => {
-      console.log('Language loaded.');
-      onStatusChanged('Language loaded.');
 
-      var pythonVersion = pyodide.runPython('import sys\nsys.version');
-      console.log(`Python version: [${pythonVersion}]`);
-
-      console.log('Loading libraries.');
-      onStatusChanged('Loading libraries.');
-
-      pyodide.loadPackage(['numpy', 'matplotlib'])
+    languagePluginPreloader
+    .then( (whatIsSelf) => {
+      whatIsSelf.languagePluginUrl = pyodideBaseUrl;
+      languagePluginLoader(whatIsSelf)
       .then( () => {
-        var s = pyodide.runPython(
-          'import numpy as np\n' +
-          'a = [1, 2]\n' +
-          'np.average(a)\n'
-        );
-        console.log(`Test script output, should be [1.5]: [${s}]`);
+        console.log('Language loaded.');
+        onStatusChanged('Language loaded.');
 
-        console.log('Language and libraries loaded successfully');
-        onStatusChanged('Language and libraries loaded successfully');
-        onInitializeComplete();
+        var pythonVersion = pyodide.runPython('import sys\nsys.version');
+        console.log(`Python version: [${pythonVersion}]`);
+
+        console.log('Loading libraries.');
+        onStatusChanged('Loading libraries.');
+
+        pyodide.loadPackage(['numpy', 'matplotlib'])
+        .then( () => {
+          var s = pyodide.runPython(
+            'import numpy as np\n' +
+            'a = [1, 2]\n' +
+            'np.average(a)\n'
+          );
+          console.log(`Test script output, should be [1.5]: [${s}]`);
+
+          console.log('Language and libraries loaded successfully');
+          onStatusChanged('Language and libraries loaded successfully');
+          onInitializeComplete();
+        });
+
+      })
+      .catch( e => {
+        onStatusChanged("Failed to initialize pyodide.");
+        onInitializeFailed(e);
       });
 
     });
@@ -519,6 +531,8 @@ function SettingsComponent() {
 
   const scriptSourceCodeTableId
     = globalConfig.get("scriptSourceCodeTableId");
+
+  const pyodideBaseUrl = getConfigPathElse(globalConfig, "pyodideBaseUrl", DEFAULT_PYODIDE_BASE_URL);
 
   const scriptInputVariableNamesTable
     = base.getTableByIdIfExists(scriptInputVariableNamesTableId);
@@ -866,6 +880,19 @@ function SettingsComponent() {
       )}
     </Box>
 
+  <FormField
+    label="Pyodide Static Files Base URL"
+    description="Configure retrieval of the static files for Pyodide, the engine that runs Python in your web browser. These files implement the Python interpreter, and the Python libraries, in your browser."
+  >
+    <Input
+      value={pyodideBaseUrl}
+      onChange = { e => {
+        let newValue = e.target.value;
+        globalConfig.setAsync('pyodideBaseUrl', newValue);
+      }}
+      placeholder={DEFAULT_PYODIDE_BASE_URL}
+    />
+  </FormField>
 
   </Box>
   );
@@ -967,6 +994,7 @@ function Chrysopelea({setIsShowingSettings}) {
   const [scriptError, setScriptError] = useState("Script has not run yet.");
 
   const [isPyodideInitialized, setIsPyodideInitialized] = useState(false);
+  const [pyodideInitializeFailed, setPyodideInitializeFailed] = useState(false);
   const [pythonStatusMsg, setPythonStatusMsg] = useState("Idle");
   const [isHelpMode, setIsHelpMode] = useState(false);
 
@@ -982,6 +1010,7 @@ function Chrysopelea({setIsShowingSettings}) {
   const isBlockControlsEnabled                = getConfigPathElse(globalConfig, 'isBlockControlsEnabled', true);
   const isScriptInputVariablesEnabled         = getConfigPathElse(globalConfig, "isScriptInputVariablesEnabled", true);
   const isScriptOutputVariablesEnabled        = getConfigPathElse(globalConfig, "isScriptOutputVariablesEnabled", false);
+  const pyodideBaseUrl                        = getConfigPathElse(globalConfig, "pyodideBaseUrl", DEFAULT_PYODIDE_BASE_URL);
 
   const [isThereAreNoScriptsDialogOpen, setThereAreNoScriptsDialogOpen] = useState(false);
 
@@ -1021,6 +1050,8 @@ function Chrysopelea({setIsShowingSettings}) {
                                     : "None loaded";
 
   const [userCode, setUserCode] = useState(selectedScriptSourceValue !== undefined ? selectedScriptSourceValue : "");
+
+  const [pyodideInitializeFailedDialogClosed, setPyodideInitializeFailedDialogClosed] = useState(false);
 
   // Dictionary keyed on scriptOutputVariableNAme. Value is array of data for that variable, to be written
   // or already written by script.
@@ -1097,7 +1128,12 @@ function Chrysopelea({setIsShowingSettings}) {
         // initialization complete
         () => {
           setIsPyodideInitialized(true);
-        }
+        },
+        // initialization failed
+        () => {
+          setPyodideInitializeFailed(true);
+        },
+        pyodideBaseUrl
       );
       setUserCode(selectedScriptSourceValue);
     },
@@ -1271,6 +1307,17 @@ function Chrysopelea({setIsShowingSettings}) {
     padding={2}
     border="thick"
   >
+    {pyodideInitializeFailed && !pyodideInitializeFailedDialogClosed && (
+      <Dialog onClose={() => setPyodideInitializeFailedDialogClosed(true)} width="320px">
+        <Dialog.CloseButton />
+        <Heading>Pyodide Initialization Failed</Heading>
+        <Text variant="paragraph">
+          Failed to initialize Pyodide, the engine that runs Python in your browser.
+          You might need to check your block settings and change 'Pyodide Static Files Base URL'.
+          Check your browser 'developer console' for more information.
+        </Text>
+      </Dialog>
+    )}
     <Box
       display={isBlockControlsEnabled ? "flex" : "none"}
       flexDirection="row"
@@ -1379,7 +1426,7 @@ function Chrysopelea({setIsShowingSettings}) {
           size="small"
           display={isPyodideInitialized ? "none" : "flex"}
         >
-          Script engine loading...
+          {pyodideInitializeFailed ? "Script engine failed to initialize" : "Script engine loading..."}
         </Text>
       </Box>
     </Box>
@@ -1736,466 +1783,475 @@ initializeBlock(() => <ChrysopeleaBlock />);
  * The main bootstrap script for loading pyodide.
  */
 
-var languagePluginLoader = new Promise((resolve, reject) => {
-  // This is filled in by the Makefile to be either a local file or the
-  // deployed location. TODO: This should be done in a less hacky
-  // way.
-  var baseURL = self.languagePluginUrl || 'https://pyodide-cdn2.iodide.io/v0.15.0/full/';
-  baseURL = baseURL.substr(0, baseURL.lastIndexOf('/')) + '/';
+// We do this to figure out what "self" is, then we pass it to the languagePluginLoader later.
+var languagePluginPreloader = new Promise((resolve, reject) => {
+  resolve(self);
+});
 
-  ////////////////////////////////////////////////////////////
-  // Package loading
-  let loadedPackages = {};
-  var loadPackagePromise = new Promise((resolve) => resolve());
-  // Regexp for validating package name and URI
-  var package_name_regexp = '[a-z0-9_][a-z0-9_\-]*'
-  var package_uri_regexp =
-      new RegExp('^https?://.*?(' + package_name_regexp + ').js$', 'i');
-  var package_name_regexp = new RegExp('^' + package_name_regexp + '$', 'i');
+var languagePluginLoader = function(whatIsSelf) {
+  return new Promise((resolve, reject) => {
+    // This is filled in by the Makefile to be either a local file or the
+    // deployed location. TODO: This should be done in a less hacky
+    // way.
+    var baseURL = whatIsSelf.languagePluginUrl || DEFAULT_PYODIDE_BASE_URL;
+    baseURL = baseURL.substr(0, baseURL.lastIndexOf('/')) + '/';
 
-  let _uri_to_package_name = (package_uri) => {
-    // Generate a unique package name from URI
+    ////////////////////////////////////////////////////////////
+    // Package loading
+    let loadedPackages = {};
+    var loadPackagePromise = new Promise((resolve) => resolve());
+    // Regexp for validating package name and URI
+    var package_name_regexp = '[a-z0-9_][a-z0-9_\-]*'
+    var package_uri_regexp =
+        new RegExp('^https?://.*?(' + package_name_regexp + ').js$', 'i');
+    var package_name_regexp = new RegExp('^' + package_name_regexp + '$', 'i');
 
-    if (package_name_regexp.test(package_uri)) {
-      return package_uri;
-    } else if (package_uri_regexp.test(package_uri)) {
-      let match = package_uri_regexp.exec(package_uri);
-      // Get the regexp group corresponding to the package name
-      return match[1];
-    } else {
-      return null;
-    }
-  };
+    let _uri_to_package_name = (package_uri) => {
+      // Generate a unique package name from URI
 
-  // clang-format off
-  let preloadWasm = () => {
-    // On Chrome, we have to instantiate wasm asynchronously. Since that
-    // can't be done synchronously within the call to dlopen, we instantiate
-    // every .so that comes our way up front, caching it in the
-    // `preloadedWasm` dictionary.
-
-    let promise = new Promise((resolve) => resolve());
-    let FS = pyodide._module.FS;
-
-    function recurseDir(rootpath) {
-      let dirs;
-      try {
-        dirs = FS.readdir(rootpath);
-      } catch {
-        return;
-      }
-      for (let entry of dirs) {
-        if (entry.startsWith('.')) {
-          continue;
-        }
-        const path = rootpath + entry;
-        if (entry.endsWith('.so')) {
-          if (Module['preloadedWasm'][path] === undefined) {
-            promise = promise
-              .then(() => Module['loadWebAssemblyModule'](
-                FS.readFile(path), {loadAsync: true}))
-              .then((module) => {
-                Module['preloadedWasm'][path] = module;
-              });
-          }
-        } else if (FS.isDir(FS.lookupPath(path).node.mode)) {
-          recurseDir(path + '/');
-        }
-      }
-    }
-
-    recurseDir('/');
-
-    return promise;
-  }
-  // clang-format on
-
-  function loadScript(url, onload, onerror) {
-    if (self.document) { // browser
-      const script = self.document.createElement('script');
-      script.src = url;
-      script.onload = (e) => { onload(); };
-      script.onerror = (e) => { onerror(); };
-      self.document.head.appendChild(script);
-    } else if (self.importScripts) { // webworker
-      try {
-        self.importScripts(url);
-        onload();
-      } catch {
-        onerror();
-      }
-    }
-  }
-
-  let _loadPackage = (names, messageCallback, errorCallback) => {
-    if (messageCallback == undefined) {
-      messageCallback = () => {};
-    }
-    if (errorCallback == undefined) {
-      errorCallback = () => {};
-    }
-    let _messageCallback = (msg) => {
-      console.log(msg);
-      messageCallback(msg);
-    };
-    let _errorCallback = (errMsg) => {
-      console.error(errMsg);
-      errorCallback(errMsg);
-    };
-
-    // DFS to find all dependencies of the requested packages
-    let packages = self.pyodide._module.packages.dependencies;
-    let loadedPackages = self.pyodide.loadedPackages;
-    let queue = [].concat(names || []);
-    let toLoad = {};
-    while (queue.length) {
-      let package_uri = queue.pop();
-
-      const pkg = _uri_to_package_name(package_uri);
-
-      if (pkg == null) {
-        _errorCallback(`Invalid package name or URI '${package_uri}'`);
-        return;
-      } else if (pkg == package_uri) {
-        package_uri = 'default channel';
-      }
-
-      if (pkg in loadedPackages) {
-        if (package_uri != loadedPackages[pkg]) {
-          _errorCallback(`URI mismatch, attempting to load package ` +
-                         `${pkg} from ${package_uri} while it is already ` +
-                         `loaded from ${loadedPackages[pkg]}!`);
-          return;
-        } else {
-          _messageCallback(`${pkg} already loaded from ${loadedPackages[pkg]}`)
-        }
-      } else if (pkg in toLoad) {
-        if (package_uri != toLoad[pkg]) {
-          _errorCallback(`URI mismatch, attempting to load package ` +
-                         `${pkg} from ${package_uri} while it is already ` +
-                         `being loaded from ${toLoad[pkg]}!`);
-          return;
-        }
+      if (package_name_regexp.test(package_uri)) {
+        return package_uri;
+      } else if (package_uri_regexp.test(package_uri)) {
+        let match = package_uri_regexp.exec(package_uri);
+        // Get the regexp group corresponding to the package name
+        return match[1];
       } else {
-        console.log(
-            `${pkg} to be loaded from ${package_uri}`); // debug level info.
+        return null;
+      }
+    };
 
-        toLoad[pkg] = package_uri;
-        if (packages.hasOwnProperty(pkg)) {
-          packages[pkg].forEach((subpackage) => {
-            if (!(subpackage in loadedPackages) && !(subpackage in toLoad)) {
-              queue.push(subpackage);
+    // clang-format off
+    let preloadWasm = () => {
+      // On Chrome, we have to instantiate wasm asynchronously. Since that
+      // can't be done synchronously within the call to dlopen, we instantiate
+      // every .so that comes our way up front, caching it in the
+      // `preloadedWasm` dictionary.
+
+      let promise = new Promise((resolve) => resolve());
+      let FS = pyodide._module.FS;
+
+      function recurseDir(rootpath) {
+        let dirs;
+        try {
+          dirs = FS.readdir(rootpath);
+        } catch {
+          return;
+        }
+        for (let entry of dirs) {
+          if (entry.startsWith('.')) {
+            continue;
+          }
+          const path = rootpath + entry;
+          if (entry.endsWith('.so')) {
+            if (Module['preloadedWasm'][path] === undefined) {
+              promise = promise
+                .then(() => Module['loadWebAssemblyModule'](
+                  FS.readFile(path), {loadAsync: true}))
+                .then((module) => {
+                  Module['preloadedWasm'][path] = module;
+                });
             }
-          });
-        } else {
-          _errorCallback(`Unknown package '${pkg}'`);
+          } else if (FS.isDir(FS.lookupPath(path).node.mode)) {
+            recurseDir(path + '/');
+          }
+        }
+      }
+
+      recurseDir('/');
+
+      return promise;
+    }
+    // clang-format on
+
+    function loadScript(url, onload, onerror) {
+      if (whatIsSelf.document) { // browser
+        const script = whatIsSelf.document.createElement('script');
+        script.src = url;
+        script.onload = (e) => { onload(); };
+        script.onerror = (e) => { onerror(); };
+        whatIsSelf.document.head.appendChild(script);
+      } else if (whatIsSelf.importScripts) { // webworker
+        try {
+          whatIsSelf.importScripts(url);
+          onload();
+        } catch {
+          onerror();
         }
       }
     }
 
-    self.pyodide._module.locateFile = (path) => {
-      // handle packages loaded from custom URLs
-      let pkg = path.replace(/\.data$/, "");
-      if (pkg in toLoad) {
-        let package_uri = toLoad[pkg];
-        if (package_uri != 'default channel') {
-          return package_uri.replace(/\.js$/, ".data");
-        };
-      };
-      return baseURL + path;
-    };
-
-    let promise = new Promise((resolve, reject) => {
-      if (Object.keys(toLoad).length === 0) {
-        resolve('No new packages to load');
-        return;
+    let _loadPackage = (names, messageCallback, errorCallback) => {
+      if (messageCallback == undefined) {
+        messageCallback = () => {};
       }
+      if (errorCallback == undefined) {
+        errorCallback = () => {};
+      }
+      let _messageCallback = (msg) => {
+        console.log(msg);
+        messageCallback(msg);
+      };
+      let _errorCallback = (errMsg) => {
+        console.error(errMsg);
+        errorCallback(errMsg);
+      };
 
-      let packageList = Array.from(Object.keys(toLoad));
-      _messageCallback(`Loading ${packageList.join(', ')}`)
+      // DFS to find all dependencies of the requested packages
+      let packages = whatIsSelf.pyodide._module.packages.dependencies;
+      let loadedPackages = whatIsSelf.pyodide.loadedPackages;
+      let queue = [].concat(names || []);
+      let toLoad = {};
+      while (queue.length) {
+        let package_uri = queue.pop();
 
-      // monitorRunDependencies is called at the beginning and the end of each
-      // package being loaded. We know we are done when it has been called
-      // exactly "toLoad * 2" times.
-      var packageCounter = Object.keys(toLoad).length * 2;
+        const pkg = _uri_to_package_name(package_uri);
 
-      self.pyodide._module.monitorRunDependencies = () => {
-        packageCounter--;
-        if (packageCounter === 0) {
-          for (let pkg in toLoad) {
-            self.pyodide.loadedPackages[pkg] = toLoad[pkg];
-          }
-          delete self.pyodide._module.monitorRunDependencies;
-          self.removeEventListener('error', windowErrorHandler);
+        if (pkg == null) {
+          _errorCallback(`Invalid package name or URI '${package_uri}'`);
+          return;
+        } else if (pkg == package_uri) {
+          package_uri = 'default channel';
+        }
 
-          let resolveMsg = `Loaded `;
-          if (packageList.length > 0) {
-            resolveMsg += packageList.join(', ');
+        if (pkg in loadedPackages) {
+          if (package_uri != loadedPackages[pkg]) {
+            _errorCallback(`URI mismatch, attempting to load package ` +
+                           `${pkg} from ${package_uri} while it is already ` +
+                           `loaded from ${loadedPackages[pkg]}!`);
+            return;
           } else {
-            resolveMsg += 'no packages'
+            _messageCallback(`${pkg} already loaded from ${loadedPackages[pkg]}`)
           }
+        } else if (pkg in toLoad) {
+          if (package_uri != toLoad[pkg]) {
+            _errorCallback(`URI mismatch, attempting to load package ` +
+                           `${pkg} from ${package_uri} while it is already ` +
+                           `being loaded from ${toLoad[pkg]}!`);
+            return;
+          }
+        } else {
+          console.log(
+              `${pkg} to be loaded from ${package_uri}`); // debug level info.
 
-          if (!isFirefox) {
-            preloadWasm().then(() => {
-              console.log(resolveMsg);
-              resolve(resolveMsg);
+          toLoad[pkg] = package_uri;
+          if (packages.hasOwnProperty(pkg)) {
+            packages[pkg].forEach((subpackage) => {
+              if (!(subpackage in loadedPackages) && !(subpackage in toLoad)) {
+                queue.push(subpackage);
+              }
             });
           } else {
-            console.log(resolveMsg);
-            resolve(resolveMsg);
+            _errorCallback(`Unknown package '${pkg}'`);
           }
         }
+      }
+
+      whatIsSelf.pyodide._module.locateFile = (path) => {
+        // handle packages loaded from custom URLs
+        let pkg = path.replace(/\.data$/, "");
+        if (pkg in toLoad) {
+          let package_uri = toLoad[pkg];
+          if (package_uri != 'default channel') {
+            return package_uri.replace(/\.js$/, ".data");
+          };
+        };
+        return baseURL + path;
       };
 
-      // Add a handler for any exceptions that are thrown in the process of
-      // loading a package
-      var windowErrorHandler = (err) => {
-        delete self.pyodide._module.monitorRunDependencies;
-        self.removeEventListener('error', windowErrorHandler);
-        // Set up a new Promise chain, since this one failed
-        loadPackagePromise = new Promise((resolve) => resolve());
-        reject(err.message);
-      };
-      self.addEventListener('error', windowErrorHandler);
-
-      for (let pkg in toLoad) {
-        let scriptSrc;
-        let package_uri = toLoad[pkg];
-        if (package_uri == 'default channel') {
-          scriptSrc = `${baseURL}${pkg}.js`;
-        } else {
-          scriptSrc = `${package_uri}`;
+      let promise = new Promise((resolve, reject) => {
+        if (Object.keys(toLoad).length === 0) {
+          resolve('No new packages to load');
+          return;
         }
-        _messageCallback(`Loading ${pkg} from ${scriptSrc}`)
-        loadScript(scriptSrc, () => {}, () => {
-          // If the package_uri fails to load, call monitorRunDependencies twice
-          // (so packageCounter will still hit 0 and finish loading), and remove
-          // the package from toLoad so we don't mark it as loaded, and remove
-          // the package from packageList so we don't say that it was loaded.
-          _errorCallback(`Couldn't load package from URL ${scriptSrc}`);
-          delete toLoad[pkg];
-          let packageListIndex = packageList.indexOf(pkg);
-          if (packageListIndex !== -1) {
-            packageList.splice(packageListIndex, 1);
-          }
-          for (let i = 0; i < 2; i++) {
-            self.pyodide._module.monitorRunDependencies();
-          }
-        });
-      }
 
-      // We have to invalidate Python's import caches, or it won't
-      // see the new files. This is done here so it happens in parallel
-      // with the fetching over the network.
-      self.pyodide.runPython('import importlib as _importlib\n' +
-                             '_importlib.invalidate_caches()\n');
-    });
+        let packageList = Array.from(Object.keys(toLoad));
+        _messageCallback(`Loading ${packageList.join(', ')}`)
 
-    return promise;
-  };
+        // monitorRunDependencies is called at the beginning and the end of each
+        // package being loaded. We know we are done when it has been called
+        // exactly "toLoad * 2" times.
+        var packageCounter = Object.keys(toLoad).length * 2;
 
-  let loadPackage = (names, messageCallback, errorCallback) => {
-    /* We want to make sure that only one loadPackage invocation runs at any
-     * given time, so this creates a "chain" of promises. */
-    loadPackagePromise = loadPackagePromise.then(
-        () => _loadPackage(names, messageCallback, errorCallback));
-    return loadPackagePromise;
-  };
-
-  ////////////////////////////////////////////////////////////
-  // Fix Python recursion limit
-  function fixRecursionLimit(pyodide) {
-    // The Javascript/Wasm call stack may be too small to handle the default
-    // Python call stack limit of 1000 frames. This is generally the case on
-    // Chrom(ium), but not on Firefox. Here, we determine the Javascript call
-    // stack depth available, and then divide by 50 (determined heuristically)
-    // to set the maximum Python call stack depth.
-
-    let depth = 0;
-    function recurse() {
-      depth += 1;
-      recurse();
-    }
-    try {
-      recurse();
-    } catch (err) {
-      ;
-    }
-
-    let recursionLimit = depth / 50;
-    if (recursionLimit > 1000) {
-      recursionLimit = 1000;
-    }
-    pyodide.runPython(
-        `import sys; sys.setrecursionlimit(int(${recursionLimit}))`);
-  };
-
-  ////////////////////////////////////////////////////////////
-  // Rearrange namespace for public API
-  let PUBLIC_API = [
-    'globals',
-    'loadPackage',
-    'loadedPackages',
-    'pyimport',
-    'repr',
-    'runPython',
-    'runPythonAsync',
-    'checkABI',
-    'version',
-    'autocomplete',
-  ];
-
-  function makePublicAPI(module, public_api) {
-    var namespace = {_module : module};
-    for (let name of public_api) {
-      namespace[name] = module[name];
-    }
-    return namespace;
-  }
-
-  ////////////////////////////////////////////////////////////
-  // Loading Pyodide
-  let wasmURL = `${baseURL}pyodide.asm.wasm`;
-  let Module = {};
-  self.Module = Module;
-
-  Module.noImageDecoding = true;
-  Module.noAudioDecoding = true;
-  Module.noWasmDecoding = true;
-  Module.preloadedWasm = {};
-  let isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-
-  let wasm_promise, wasm_fetch = fetch(wasmURL);
-  const compileBuffer = () =>
-      wasm_fetch.then(response => response.arrayBuffer())
-          .then(bytes => WebAssembly.compile(bytes));
-  if (WebAssembly.compileStreaming === undefined) {
-    wasm_promise = compileBuffer();
-  } else {
-    wasm_promise = WebAssembly.compileStreaming(wasm_fetch);
-    wasm_promise = wasm_promise.catch(e => {
-      if (e instanceof TypeError) {
-        console.error("pyodide streaming compilation failed:", e,
-                      "- falling back to buffered compilation");
-        return compileBuffer()
-      }
-      throw e;
-    });
-  }
-
-  Module.instantiateWasm = (info, receiveInstance) => {
-    wasm_promise.then(module => WebAssembly.instantiate(module, info))
-        .then(instance => receiveInstance(instance));
-    return {};
-  };
-
-  Module.checkABI = function(ABI_number) {
-    if (ABI_number !== parseInt('1')) {
-      var ABI_mismatch_exception =
-          `ABI numbers differ. Expected 1, got ${ABI_number}`;
-      console.error(ABI_mismatch_exception);
-      throw ABI_mismatch_exception;
-    }
-    return true;
-  };
-
-  Module.autocomplete =
-      function(path) {
-    var pyodide_module = Module.pyimport("pyodide");
-    return pyodide_module.get_completions(path);
-  }
-
-      Module.locateFile = (path) => baseURL + path;
-  var postRunPromise = new Promise((resolve, reject) => {
-    Module.postRun = () => {
-      delete self.Module;
-      fetch(`${baseURL}packages.json`)
-          .then((response) => response.json())
-          .then((json) => {
-            fixRecursionLimit(self.pyodide);
-            self.pyodide.globals =
-                self.pyodide.runPython('import sys\nsys.modules["__main__"]');
-            self.pyodide = makePublicAPI(self.pyodide, PUBLIC_API);
-            self.pyodide._module.packages = json;
-            if (self.iodide !== undefined) {
-              // Perform some completions immediately so there isn't a delay on
-              // the first call to autocomplete
-              self.pyodide.runPython('import pyodide');
-              self.pyodide.runPython('pyodide.get_completions("")');
+        whatIsSelf.pyodide._module.monitorRunDependencies = () => {
+          packageCounter--;
+          if (packageCounter === 0) {
+            for (let pkg in toLoad) {
+              whatIsSelf.pyodide.loadedPackages[pkg] = toLoad[pkg];
             }
-            resolve();
-          });
-    };
-  });
+            delete whatIsSelf.pyodide._module.monitorRunDependencies;
+            whatIsSelf.removeEventListener('error', windowErrorHandler);
 
-  var dataLoadPromise = new Promise((resolve, reject) => {
-    Module.monitorRunDependencies =
-        (n) => {
-          if (n === 0) {
-            delete Module.monitorRunDependencies;
-            resolve();
+            let resolveMsg = `Loaded `;
+            if (packageList.length > 0) {
+              resolveMsg += packageList.join(', ');
+            } else {
+              resolveMsg += 'no packages'
+            }
+
+            if (!isFirefox) {
+              preloadWasm().then(() => {
+                console.log(resolveMsg);
+                resolve(resolveMsg);
+              });
+            } else {
+              console.log(resolveMsg);
+              resolve(resolveMsg);
+            }
           }
-        }
-  });
+        };
 
-  Promise.all([ postRunPromise, dataLoadPromise ]).then(() => resolve());
+        // Add a handler for any exceptions that are thrown in the process of
+        // loading a package
+        var windowErrorHandler = (err) => {
+          delete whatIsSelf.pyodide._module.monitorRunDependencies;
+          whatIsSelf.removeEventListener('error', windowErrorHandler);
+          // Set up a new Promise chain, since this one failed
+          loadPackagePromise = new Promise((resolve) => resolve());
+          reject(err.message);
+        };
+        whatIsSelf.addEventListener('error', windowErrorHandler);
 
-  const data_script_src = `${baseURL}pyodide.asm.data.js`;
-  loadScript(data_script_src, () => {
-    const scriptSrc = `${baseURL}pyodide.asm.js`;
-    loadScript(scriptSrc, () => {
-      // The emscripten module needs to be at this location for the core
-      // filesystem to install itself. Once that's complete, it will be replaced
-      // by the call to `makePublicAPI` with a more limited public API.
-      self.pyodide = pyodide(Module);
-      self.pyodide.loadedPackages = {};
-      self.pyodide.loadPackage = loadPackage;
-    }, () => {});
-  }, () => {});
-
-  ////////////////////////////////////////////////////////////
-  // Iodide-specific functionality, that doesn't make sense
-  // if not using with Iodide.
-  if (self.iodide !== undefined) {
-    // Load the custom CSS for Pyodide
-    let link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    link.href = `${baseURL}renderedhtml.css`;
-    document.getElementsByTagName('head')[0].appendChild(link);
-
-    // Add a custom output handler for Python objects
-    self.iodide.addOutputRenderer({
-      shouldRender : (val) => {
-        return (typeof val === 'function' &&
-                pyodide._module.PyProxy.isPyProxy(val));
-      },
-
-      render : (val) => {
-        let div = document.createElement('div');
-        div.className = 'rendered_html';
-        var element;
-        if (val._repr_html_ !== undefined) {
-          let result = val._repr_html_();
-          if (typeof result === 'string') {
-            div.appendChild(new DOMParser()
-                                .parseFromString(result, 'text/html')
-                                .body.firstChild);
-            element = div;
+        for (let pkg in toLoad) {
+          let scriptSrc;
+          let package_uri = toLoad[pkg];
+          if (package_uri == 'default channel') {
+            scriptSrc = `${baseURL}${pkg}.js`;
           } else {
-            element = result;
+            scriptSrc = `${package_uri}`;
           }
-        } else {
-          let pre = document.createElement('pre');
-          pre.textContent = val.toString();
-          div.appendChild(pre);
-          element = div;
+          _messageCallback(`Loading ${pkg} from ${scriptSrc}`)
+          loadScript(scriptSrc, () => {}, () => {
+            // If the package_uri fails to load, call monitorRunDependencies twice
+            // (so packageCounter will still hit 0 and finish loading), and remove
+            // the package from toLoad so we don't mark it as loaded, and remove
+            // the package from packageList so we don't say that it was loaded.
+            _errorCallback(`Couldn't load package from URL ${scriptSrc}`);
+            delete toLoad[pkg];
+            let packageListIndex = packageList.indexOf(pkg);
+            if (packageListIndex !== -1) {
+              packageList.splice(packageListIndex, 1);
+            }
+            for (let i = 0; i < 2; i++) {
+              whatIsSelf.pyodide._module.monitorRunDependencies();
+            }
+          });
         }
-        return element.outerHTML;
+
+        // We have to invalidate Python's import caches, or it won't
+        // see the new files. This is done here so it happens in parallel
+        // with the fetching over the network.
+        whatIsSelf.pyodide.runPython('import importlib as _importlib\n' +
+                               '_importlib.invalidate_caches()\n');
+      });
+
+      return promise;
+    };
+
+    let loadPackage = (names, messageCallback, errorCallback) => {
+      /* We want to make sure that only one loadPackage invocation runs at any
+       * given time, so this creates a "chain" of promises. */
+      loadPackagePromise = loadPackagePromise.then(
+          () => _loadPackage(names, messageCallback, errorCallback));
+      return loadPackagePromise;
+    };
+
+    ////////////////////////////////////////////////////////////
+    // Fix Python recursion limit
+    function fixRecursionLimit(pyodide) {
+      // The Javascript/Wasm call stack may be too small to handle the default
+      // Python call stack limit of 1000 frames. This is generally the case on
+      // Chrom(ium), but not on Firefox. Here, we determine the Javascript call
+      // stack depth available, and then divide by 50 (determined heuristically)
+      // to set the maximum Python call stack depth.
+
+      let depth = 0;
+      function recurse() {
+        depth += 1;
+        recurse();
       }
+      try {
+        recurse();
+      } catch (err) {
+        ;
+      }
+
+      let recursionLimit = depth / 50;
+      if (recursionLimit > 1000) {
+        recursionLimit = 1000;
+      }
+      pyodide.runPython(
+          `import sys; sys.setrecursionlimit(int(${recursionLimit}))`);
+    };
+
+    ////////////////////////////////////////////////////////////
+    // Rearrange namespace for public API
+    let PUBLIC_API = [
+      'globals',
+      'loadPackage',
+      'loadedPackages',
+      'pyimport',
+      'repr',
+      'runPython',
+      'runPythonAsync',
+      'checkABI',
+      'version',
+      'autocomplete',
+    ];
+
+    function makePublicAPI(module, public_api) {
+      var namespace = {_module : module};
+      for (let name of public_api) {
+        namespace[name] = module[name];
+      }
+      return namespace;
+    }
+
+    ////////////////////////////////////////////////////////////
+    // Loading Pyodide
+    let wasmURL = `${baseURL}pyodide.asm.wasm`;
+    let Module = {};
+    whatIsSelf.Module = Module;
+
+    Module.noImageDecoding = true;
+    Module.noAudioDecoding = true;
+    Module.noWasmDecoding = true;
+    Module.preloadedWasm = {};
+    let isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+
+    let wasm_promise, wasm_fetch = fetch(wasmURL);
+    const compileBuffer = () =>
+        wasm_fetch.then(response => response.arrayBuffer())
+            .then(bytes => WebAssembly.compile(bytes));
+    if (WebAssembly.compileStreaming === undefined) {
+      wasm_promise = compileBuffer();
+    } else {
+      wasm_promise = WebAssembly.compileStreaming(wasm_fetch);
+      wasm_promise = wasm_promise.catch(e => {
+        // Not sure about consequences of not invoking compileBuffer() below and rejecting instead.
+        //if (e instanceof TypeError) {
+        //  console.error("pyodide streaming compilation failed:", e,
+        //                "- falling back to buffered compilation");
+        //  return compileBuffer()
+        //}
+        //throw e;
+        reject(e);
+      });
+    }
+
+    Module.instantiateWasm = (info, receiveInstance) => {
+      wasm_promise.then(module => WebAssembly.instantiate(module, info))
+          .then(instance => receiveInstance(instance));
+      return {};
+    };
+
+    Module.checkABI = function(ABI_number) {
+      if (ABI_number !== parseInt('1')) {
+        var ABI_mismatch_exception =
+            `ABI numbers differ. Expected 1, got ${ABI_number}`;
+        console.error(ABI_mismatch_exception);
+        throw ABI_mismatch_exception;
+      }
+      return true;
+    };
+
+    Module.autocomplete =
+        function(path) {
+      var pyodide_module = Module.pyimport("pyodide");
+      return pyodide_module.get_completions(path);
+    }
+
+        Module.locateFile = (path) => baseURL + path;
+    var postRunPromise = new Promise((resolve, reject) => {
+      Module.postRun = () => {
+        delete whatIsSelf.Module;
+        fetch(`${baseURL}packages.json`)
+            .then((response) => response.json())
+            .then((json) => {
+              fixRecursionLimit(whatIsSelf.pyodide);
+              whatIsSelf.pyodide.globals =
+                  whatIsSelf.pyodide.runPython('import sys\nsys.modules["__main__"]');
+              whatIsSelf.pyodide = makePublicAPI(whatIsSelf.pyodide, PUBLIC_API);
+              whatIsSelf.pyodide._module.packages = json;
+              if (whatIsSelf.iodide !== undefined) {
+                // Perform some completions immediately so there isn't a delay on
+                // the first call to autocomplete
+                whatIsSelf.pyodide.runPython('import pyodide');
+                whatIsSelf.pyodide.runPython('pyodide.get_completions("")');
+              }
+              resolve();
+            });
+      };
     });
-  }
-});
+
+    var dataLoadPromise = new Promise((resolve, reject) => {
+      Module.monitorRunDependencies =
+          (n) => {
+            if (n === 0) {
+              delete Module.monitorRunDependencies;
+              resolve();
+            }
+          }
+    });
+
+    Promise.all([ postRunPromise, dataLoadPromise ]).then(() => resolve());
+
+    const data_script_src = `${baseURL}pyodide.asm.data.js`;
+    loadScript(data_script_src, () => {
+      const scriptSrc = `${baseURL}pyodide.asm.js`;
+      loadScript(scriptSrc, () => {
+        // The emscripten module needs to be at this location for the core
+        // filesystem to install itself. Once that's complete, it will be replaced
+        // by the call to `makePublicAPI` with a more limited public API.
+        whatIsSelf.pyodide = pyodide(Module);
+        whatIsSelf.pyodide.loadedPackages = {};
+        whatIsSelf.pyodide.loadPackage = loadPackage;
+      }, () => {});
+    }, () => {});
+
+    ////////////////////////////////////////////////////////////
+    // Iodide-specific functionality, that doesn't make sense
+    // if not using with Iodide.
+    if (whatIsSelf.iodide !== undefined) {
+      // Load the custom CSS for Pyodide
+      let link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = `${baseURL}renderedhtml.css`;
+      document.getElementsByTagName('head')[0].appendChild(link);
+
+      // Add a custom output handler for Python objects
+      whatIsSelf.iodide.addOutputRenderer({
+        shouldRender : (val) => {
+          return (typeof val === 'function' &&
+                  pyodide._module.PyProxy.isPyProxy(val));
+        },
+
+        render : (val) => {
+          let div = document.createElement('div');
+          div.className = 'rendered_html';
+          var element;
+          if (val._repr_html_ !== undefined) {
+            let result = val._repr_html_();
+            if (typeof result === 'string') {
+              div.appendChild(new DOMParser()
+                                  .parseFromString(result, 'text/html')
+                                  .body.firstChild);
+              element = div;
+            } else {
+              element = result;
+            }
+          } else {
+            let pre = document.createElement('pre');
+            pre.textContent = val.toString();
+            div.appendChild(pre);
+            element = div;
+          }
+          return element.outerHTML;
+        }
+      });
+    }
+  });
+}
 
 function getSanitizedScriptIdentifier(identifier) {
   return identifier.replace(/\s/g,'_');
