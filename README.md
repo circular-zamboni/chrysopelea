@@ -36,3 +36,68 @@ are incorporated by loading "Pyodide" WebAssembly files into your browser.
   https://github.com/iodide-project/pyodide/blob/master/LICENSE
 
   https://webassembly.org/
+
+## Chrysopelea cheat sheet
+
+### Create and render a matplotlib plot
+
+Use the method chrysopelea.saveAirplot(plot, plotName).
+
+This method is magically available to your code without requiring an import.
+
+```python
+#
+import numpy as np
+import matplotlib.pyplot as plt
+
+# example1
+# evenly sampled time at 200ms intervals
+t = np.arange(0., 5., 0.2)
+
+# red dashes, blue squares and green triangles
+plt.plot(t, t, 'r--', t, t**2, 'bs', t, t**3, 'g^')
+chrysopelea.saveAirplot(plt, 'example1')
+
+# example2
+#----------
+plt.clf()
+data = {'a': np.arange(50),
+        'c': np.random.randint(0, 50, 50),
+        'd': np.random.randn(50)}
+data['b'] = data['a'] + 10 * np.random.randn(50)
+data['d'] = np.abs(data['d']) * 100
+
+plt.scatter('a', 'b', c='c', s='d', data=data)
+plt.xlabel('entry a')
+plt.ylabel('entry b')
+chrysopelea.saveAirplot(plt, 'example2')
+```
+
+### Read and write data from/to Airtable
+
+To see the syntax for reading input variables or
+writing output variables, enable and view the "Data Inputs Summary" and
+"Data Outputs Summary" sections of the block.
+
+An example is shown below. Identifiers of the following form are dependent
+on your block configuration. The example assumes a particular block
+configuration that is not described here.
+
+  chrysopelea.outputs.AAAA
+  chrysopelea.inputs.BBBB
+  row.getCellValue("CCCC")
+
+```python
+#
+chrysopelea.outputs.regionalAverageAnomaly.YYYYMM = [row.getCellValue("YYYYMM") for row in chrysopelea.inputs.usGreatPlains]
+
+usGreatPlains_Anomaly_Degrees_Celsius = [row.getCellValue("Anomaly Degrees Celsius") for row in chrysopelea.inputs.usGreatPlains]
+usNorthwest_Anomaly_Degrees_Celsius   = [row.getCellValue("Anomaly Degrees Celsius") for row in chrysopelea.inputs.usNorthwest]
+usSoutheast_Anomaly_Degrees_Celsius   = [row.getCellValue("Anomaly Degrees Celsius") for row in chrysopelea.inputs.usSoutheast]
+
+arrays = np.array([usGreatPlains_Anomaly_Degrees_Celsius, usNorthwest_Anomaly_Degrees_Celsius, usSoutheast_Anomaly_Degrees_Celsius])
+
+mean_Degrees_Celsius = np.mean( arrays, axis = 0 )
+
+chrysopelea.outputs.regionalAverageAnomaly.Anomaly_Degrees_Celsius = mean_Degrees_Celsius
+```
