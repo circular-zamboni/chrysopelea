@@ -37,7 +37,7 @@ are incorporated by loading "Pyodide" WebAssembly files into your browser.
 
   https://webassembly.org/
 
-## Chrysopelea cheat sheet
+## Chrysopelea Python syntax cheat sheet
 
 ### Create and render a matplotlib plot
 
