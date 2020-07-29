@@ -41,7 +41,8 @@ are incorporated by loading "Pyodide" WebAssembly files into your browser.
 
 ### Create and render a matplotlib plot
 
-Use the method chrysopelea.saveAirplot(plot, plotName).
+Use the method chrysopelea.saveAirplot(plot, plotName). The argument
+plotName is used as a label when rendering the plot.
 
 This method is magically available to your code without requiring an import.
 
