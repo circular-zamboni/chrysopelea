@@ -79,15 +79,17 @@ To see the syntax for reading input variables or
 writing output variables, enable and view the "Data Inputs Summary" and
 "Data Outputs Summary" sections of the block.
 
-An example is shown below. The presence of identifiers of the form listed below are dependent
-on your block configuration. The example assumes a particular block
+The presence of identifiers of the form listed below are dependent
+on your block configuration.
+
+- chrysopelea.outputs.AAAA
+- chrysopelea.inputs.BBBB
+- row.getCellValue("CCCC")
+
+An example is shown below. The example assumes a particular block
 configuration that is not described here.  Your equivalent "AAAA", "BBBB", "CCCC"
 identifiers will be listed and described in the block's "Data Inputs Summary" and
 "Data Outputs Summary".
-
-  - chrysopelea.outputs.AAAA
-  - chrysopelea.inputs.BBBB
-  - row.getCellValue("CCCC")
 
 ```python
 #
