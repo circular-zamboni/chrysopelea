@@ -90,8 +90,9 @@ on your block configuration.
 GGGG, using python array.
 
 An example is shown below. The example assumes a particular block
-configuration that is not described here.  Your equivalent "AAAA", "BBBB", "CCCC"
-identifiers will be listed and described in the block's "Data Inputs Summary" and
+configuration that is not described here.  Your equivalent identifiers of 
+the form "AAAA", "BBBB", "CCCC"
+illustrated above will be listed and described in the block's "Data Inputs Summary" and
 "Data Outputs Summary".
 
 ```python
