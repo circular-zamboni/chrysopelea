@@ -81,11 +81,13 @@ writing output variables, enable and view the "Data Inputs Summary" and
 
 An example is shown below. Identifiers of the following form are dependent
 on your block configuration. The example assumes a particular block
-configuration that is not described here.
+configuration that is not described here.  Your equivalent "AAAA", "BBBB", "CCCC"
+identifiers will be listed and described in the block's "Data Inputs Summary" and
+"Data Outputs Summary".
 
-  chrysopelea.outputs.AAAA
-  chrysopelea.inputs.BBBB
-  row.getCellValue("CCCC")
+  - chrysopelea.outputs.AAAA
+  - chrysopelea.inputs.BBBB
+  - row.getCellValue("CCCC")
 
 ```python
 #
