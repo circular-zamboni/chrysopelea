@@ -85,7 +85,9 @@ on your block configuration.
 
 - chrysopelea.outputs.AAAA - AAAA is script output variable name.
 - chrysopelea.inputs.BBBB - BBBB is script input variable name.
-- row.getCellValue("CCCC") - CCCC is field name.
+- myPythonInputVar = [row.getCellValue("FFFF") for row in chrysopelea.inputs.BBBB] - read Airtable field data from Airtable record rows to populate python array.
+- chrysopelea.outputs.AAAA.GGGG = myPythonOutputVar - write Airtable record fields
+using python array.
 
 An example is shown below. The example assumes a particular block
 configuration that is not described here.  Your equivalent "AAAA", "BBBB", "CCCC"
