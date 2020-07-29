@@ -1,6 +1,4 @@
-# chrysopelea
-Python in Airtable.
-
+# chrysopelea TODO
 
 - [x] load pyodide from cdn
 - [x] configure script input data
