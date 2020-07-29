@@ -82,9 +82,9 @@ writing output variables, enable and view the "Data Inputs Summary" and
 The presence of identifiers of the form listed below are dependent
 on your block configuration.
 
-- chrysopelea.outputs.AAAA
-- chrysopelea.inputs.BBBB
-- row.getCellValue("CCCC")
+- chrysopelea.outputs.AAAA - AAAA is script output variable name.
+- chrysopelea.inputs.BBBB - BBBB is script input variable name.
+- row.getCellValue("CCCC") - CCCC is field name.
 
 An example is shown below. The example assumes a particular block
 configuration that is not described here.  Your equivalent "AAAA", "BBBB", "CCCC"
