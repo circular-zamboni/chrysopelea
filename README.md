@@ -42,7 +42,8 @@ are incorporated by loading "Pyodide" WebAssembly files into your browser.
 ### Create and render a matplotlib plot
 
 Use the method chrysopelea.saveAirplot(plot, plotName). The argument
-plotName is used as a label when rendering the plot.
+'plot' should be a matplotlib plot object. The argument
+'plotName' is used as a label when rendering the plot.
 
 This method is magically available to your code without requiring an import.
 
@@ -90,7 +91,7 @@ on your block configuration.
 GGGG, using python array.
 
 An example is shown below. The example assumes a particular block
-configuration that is not described here.  Your equivalent identifiers of 
+configuration that is not described here.  Your equivalent identifiers of
 the form "AAAA", "BBBB", "CCCC"
 illustrated above will be listed and described in the block's "Data Inputs Summary" and
 "Data Outputs Summary".
