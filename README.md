@@ -83,11 +83,11 @@ writing output variables, enable and view the "Data Inputs Summary" and
 The presence of identifiers of the form listed below are dependent
 on your block configuration.
 
-- chrysopelea.outputs.AAAA - AAAA is script output variable name.
-- chrysopelea.inputs.BBBB - BBBB is script input variable name.
-- myPythonInputVar = [row.getCellValue("FFFF") for row in chrysopelea.inputs.BBBB] - read Airtable field data from Airtable record rows to populate python array.
-- chrysopelea.outputs.AAAA.GGGG = myPythonOutputVar - write Airtable record fields
-using python array.
+- chrysopelea.inputs.AAAA - AAAA is script input variable name.
+- chrysopelea.outputs.BBBB - BBBB is script output variable name.
+- myPythonInputVar = [row.getCellValue("FFFF") for row in chrysopelea.inputs.AAAA] - read Airtable field FFFF data from Airtable record rows to populate python array.
+- chrysopelea.outputs.BBBB.GGGG = myPythonOutputVar - write Airtable records, field
+GGGG, using python array.
 
 An example is shown below. The example assumes a particular block
 configuration that is not described here.  Your equivalent "AAAA", "BBBB", "CCCC"
