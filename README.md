@@ -1,7 +1,7 @@
 # What is Chrysopelea?
 
 Zero-infrastructure data storage, collaborative manipulation, analysis,
-and visualization, by using Airtable combined with Python running
+and visualization. This is enabled by using Airtable combined with Python running
 in the browser.
 
 ## What this block does
